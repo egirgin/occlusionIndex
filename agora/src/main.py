@@ -62,8 +62,12 @@ if __name__ == '__main__':
 
     # flags
     scale = 1
-    draw = True
-    criterion = "head_subset"
+    draw = False
+    if len(sys.argv) > 2:
+        criterion = sys.argv[2]
+    else:
+        criterion = "head_subset"
+
     criterion_mask = form_criterion(coco_subset[criterion])
     selected_imgs = []
     selected_occ_values = []
