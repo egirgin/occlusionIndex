@@ -1,150 +1,75 @@
-import cv2
+import cv2, os
 import numpy as np
 
-def approximate_bb(pose2d, scale):
-    x_offset = 7
-    y_offset = 15
-    xs = pose2d[0]
-    ys = pose2d[1]
+def show_im(img):
 
-    x_min = int(xs.min()/scale) - x_offset
-    x_max = int(xs.max()/scale) + x_offset
+    cv2.imshow("window_name", img)
 
-    y_min = int(ys.min()/scale) - y_offset
-    y_max = int(ys.max()/scale) + y_offset
+    cv2.waitKey(0)
 
-    top_left = [x_min, y_min]
+    cv2.destroyAllWindows()
 
-    bottom_right = [x_max, y_max]
+def read_im(img_path, scale=1, show=False):
+    img = cv2.imread(img_path)
 
-    return top_left, bottom_right
-
-def draw_sidebyside(img1, img2, vis_scale= 1, show=True):
-
-    pad = 10
-
-    img1 = cv2.copyMakeBorder(img1, pad, pad, pad, pad, cv2.BORDER_CONSTANT)
-
-    img2 = cv2.copyMakeBorder(img2, pad, pad, pad, pad, cv2.BORDER_CONSTANT)
-
-    numpy_horizontal_concat = np.concatenate((img1, img2), axis=1)
+    img = cv2.resize(img, (int(img.shape[1] * scale), int(img.shape[0] * scale)))
 
     if show:
-        numpy_horizontal_concat = cv2.resize(numpy_horizontal_concat, (int(numpy_horizontal_concat.shape[1] * vis_scale), int(numpy_horizontal_concat.shape[0] * vis_scale)))
-
-        cv2.imshow("Side by Side", numpy_horizontal_concat)
+        cv2.imshow("window_name", img)
 
         cv2.waitKey(0)
 
         cv2.destroyAllWindows()
 
-    return numpy_horizontal_concat
+    return img
 
-def keypoint_type_conversion(keypoints, scale, keypoint_size=10):
+def save_processed_img(img, img_filename):
+	os.makedirs("processed_imgs", exist_ok=True)
 
-    num_ppl, num_keypoints, _ = keypoints.shape
+	cv2.imwrite("processed_imgs/{}".format(img_filename), img)
 
-    keypoints_list = []
+def draw_bboxes(image, bboxes, colors, index_values):
 
-    for person_id in range(num_ppl):
-        person_keypoints = [cv2.KeyPoint(keypoints[person_id][i][0]*scale, keypoints[person_id][i][1]*scale, keypoint_size) for i in range(num_keypoints)]
+    num_models = len(bboxes)
 
-        person_keypoints = tuple(person_keypoints)
+    if colors == None:
+        colors = np.random.randint(255, size=(num_models, 3)).tolist()  # try not to send colors None
 
-        keypoints_list.append(person_keypoints)
+    for model_id in range(num_models):
 
-    return keypoints_list
+        left_top = bboxes[model_id][0]
 
+        right_bottom = bboxes[model_id][1]
 
-def draw_keypoints_show(keypoint_img, keypoints2d, bboxes, vis_scale, show=True):
+        image = cv2.rectangle(image, left_top, right_bottom, colors[model_id], 2)
+        if index_values != None:
+            image = cv2.putText(image, "{:.2f}".format(index_values[model_id]), left_top, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
-    ppl, _, _ = keypoints2d.shape
-
-    for model_id in range(ppl):
-        color = np.random.randint(0, 255, 3).tolist()
-
-        keypoints_converted = keypoint_type_conversion(keypoints2d, vis_scale)
-
-        keypoint_img = cv2.drawKeypoints(keypoint_img, keypoints_converted[model_id], 0, color)
-        keypoint_img = cv2.rectangle(keypoint_img, np.multiply(bboxes[model_id][0], vis_scale).astype(int), np.multiply(bboxes[model_id][1], vis_scale).astype(int), color, 2)
-
-    if show:
-
-        cv2.imshow("BBoxes and 2D Keypoints", keypoint_img)
-
-        cv2.waitKey(0)
-
-        cv2.destroyAllWindows()
-
-    return keypoint_img
+    return image
 
 
-def draw_keypoints_mask(all_mask, keypoints2d, scale, show=True, count=0):
-    ppl, _, _ = keypoints2d.shape
+def draw_keypoints(image, keypoints, occlusion_status, only_occluded=False):
+    num_models = len(keypoints)
 
-    for model_id in range(ppl):
-        keypoints_converted = keypoint_type_conversion(keypoints2d, scale)
+    for model_id in range(num_models):
+        for kp_id, kp in enumerate(keypoints[model_id]):
+            if only_occluded and occlusion_status[model_id][kp_id]:
+                image = cv2.circle(image, (int(kp[0]), int(kp[1])), 1, (0, 0, 255), 2)
+            else:
+                image = cv2.circle(image, (int(kp[0]), int(kp[1])), 1, (0, 0, 255), 2)
+            #image = cv2.putText(image, "{}".format(occlusion_status[model_id, kp_id]), (int(kp[0]), int(kp[1])), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
+    return image
 
-        all_mask = cv2.drawKeypoints(all_mask, keypoints_converted[model_id], 0, (255,255,255))
+def draw_masks(image, mask):
 
-    if show:
-        cv2.imshow("Mask and 2D Keypoints {}".format(count), all_mask)
+    mask[mask == (0, 0, 255)] = 0 
 
-        cv2.waitKey(0)
+    alpha = 0.3
 
-        cv2.destroyAllWindows()
+    # Using cv2.polylines() method
+    # Draw a Blue polygon with
+    # thickness of 1 px
 
-    return all_mask
+    image = cv2.addWeighted(mask, alpha, image, 1 - alpha, 0)
 
-
-def draw_crowd_keypoints(img, keypoints, bboxes, crowd_indices, scale, show=True):
-
-    for model_id in range(len(bboxes)):
-        color = np.random.randint(0, 255, 3).tolist()
-        keypoint_img = cv2.rectangle(img, np.multiply(bboxes[model_id][0], scale).astype(int), np.multiply(bboxes[model_id][1], scale).astype(int), color, 2)
-        #keypoint_img = cv2.putText(keypoint_img, "{:.2f}".format(crowd_indices[model_id]), np.multiply(bboxes[model_id][0], scale).astype(int), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
-        try:
-            keypoint_img = cv2.putText(keypoint_img, "{:.2f}".format(crowd_indices[model_id]),
-                                   np.multiply(bboxes[model_id][0], scale).astype(int), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
-                                   (0, 0, 0), 2)
-        except:
-            pass
-
-    keypoints_converted = keypoint_type_conversion(keypoints, scale)
-
-    keypoint_img = cv2.drawKeypoints(keypoint_img, keypoints_converted[0], 0, np.random.randint(0, 255, 3).tolist())
-
-    if show:
-        cv2.imshow("Intersection Keypoints on Bboxes", keypoint_img)
-
-        cv2.waitKey(0)
-
-        cv2.destroyAllWindows()
-
-    return keypoint_img
-
-
-def draw_mask_crowd_keypoints(mask_img, keypoints, bboxes, keypoint_occlusion_ratio, scale, show=True):
-
-    for model_id in range(len(bboxes)):
-        color = np.random.randint(0, 255, 3).tolist()
-        #mask_img = cv2.rectangle(mask_img, np.multiply(bboxes[model_id][0], scale).astype(int), np.multiply(bboxes[model_id][1], scale).astype(int), color, 2)
-        #mask_img = cv2.putText(mask_img, "{:.2f}".format(keypoint_occlusion_ratio[model_id]), np.multiply(bboxes[model_id][0], scale).astype(int), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
-        try:
-            mask_img = cv2.putText(mask_img, "{:.2f}".format(keypoint_occlusion_ratio[model_id]),
-                               np.multiply(bboxes[model_id][0], scale).astype(int), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
-                               (255, 255, 255), 2)
-        except:
-            pass
-    keypoints_converted = keypoint_type_conversion(keypoints, scale)
-
-    mask_img = cv2.drawKeypoints(mask_img, keypoints_converted[0], 0, [255,255,255])
-
-    if show:
-        cv2.imshow("Intersection Keypoints on Masks", mask_img)
-
-        cv2.waitKey(0)
-
-        cv2.destroyAllWindows()
-
-    return mask_img
+    return image
