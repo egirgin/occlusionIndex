@@ -1,6 +1,8 @@
 import trimesh
 import numpy as np
 import cv2
+import os
+import json
 
 global image_width, image_height, image_canvas, z_buffer
 
@@ -34,6 +36,13 @@ def load_mesh(path_list):
     return vertices_list, faces_list
 
 def load_cam(cam_path):
+
+    with open(cam_path, "r") as cam_json:
+        cam_data = json.load(cam_json)
+
+    intrinsics = np.array(cam_data["intrinsics"])
+    extrinsics = np.array(cam_data["extrinsics"])
+    """
     # Define camera intrinsics
     intrinsics = [[1.96185286e+03, 0.00000000e+00, 5.40000000e+02],
                 [0.00000000e+00, 1.96923077e+03, 9.60000000e+02],
@@ -47,6 +56,7 @@ def load_cam(cam_path):
         [-0.41108811, -0.24412027, -0.87830055,  2.78461675],
         [ 0.        ,  0.        ,  0.        ,  1.        ]]
         )
+    """
 
     return intrinsics, extrinsics
 
@@ -101,24 +111,58 @@ def render(faces, image_points, vertices, color):
 
 def main():
 
-    mesh_path_list = [
-        "/home/emre/Documents/master/thesis/custom_smpl/mesh_models/smpl_np_0.obj",
-        "/home/emre/Documents/master/thesis/custom_smpl/mesh_models/smpl_np_1.obj"
-    ]
+    smpl_obj_path = "/home/emre/Documents/master/thesis/3dpw/src/smpl_objects"
 
-    vertices_list, faces_list = load_mesh(mesh_path_list)
+    for seq_name in os.listdir(smpl_obj_path):
+        print("Processing {}...".format(seq_name))
+        
+        seq_path = smpl_obj_path + "/" + seq_name
 
-    intrinsics, extrinsics = load_cam("cam_path_TODO") # TODO
+        for image_name in os.listdir(seq_path):
+            # initialize canvas and z-buffer
+            global image_canvas
+            image_canvas = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
-    image_points_list = project_points(vertices_list=vertices_list, intrinsics=intrinsics, extrinsics=extrinsics)
+            global z_buffer
+            z_buffer = np.ones((image_height, image_width), dtype=np.float64) * -np.inf
+            
+            # collect mesh paths
+            image_folder_path = seq_path + "/" + image_name
+            
+            mesh_path_list = []
 
-    for mesh_id, _ in enumerate(mesh_path_list):
-        render(faces=faces_list[mesh_id], image_points=image_points_list[mesh_id], vertices=vertices_list[mesh_id], color=color_list[mesh_id])
+            cam_path = None
 
-    # show results
-    cv2.imshow('result', image_canvas)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+            for mesh_file in os.listdir(image_folder_path):
+                if mesh_file.endswith(".obj"):
+                    mesh_path_list.append(image_folder_path + "/" + mesh_file)
+                else:
+                    cam_path = image_folder_path + "/" + mesh_file
+
+            # load mesh object
+            vertices_list, faces_list = load_mesh(mesh_path_list)
+
+            # load cam params
+            intrinsics, extrinsics = load_cam(cam_path)
+
+            # project triangles to image plane
+            image_points_list = project_points(vertices_list=vertices_list, intrinsics=intrinsics, extrinsics=extrinsics)
+
+            # render meshes with z buffer
+            for mesh_id, _ in enumerate(mesh_path_list):
+                render(faces=faces_list[mesh_id], image_points=image_points_list[mesh_id], vertices=vertices_list[mesh_id], color=color_list[mesh_id])
+
+            # save generated mask
+            save_path = "./masks/{}".format(seq_name)
+
+            os.makedirs(save_path, exist_ok=True)
+
+            cv2.imwrite("{}/{}.jpg".format(save_path, image_name), image_canvas)
+            
+            # show results
+            # cv2.imshow('result', image_canvas)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
