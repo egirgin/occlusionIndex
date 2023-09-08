@@ -111,14 +111,19 @@ def render(faces, image_points, vertices, color):
 
 def main():
 
-    smpl_obj_path = "/home/emre/Documents/master/thesis/3dpw/src/smpl_objects"
+    smpl_obj_path = "/home/emre/Documents/master/repository/occlusionIndex/3dpw/generate_smpl/smpl_objects"
 
     for seq_name in os.listdir(smpl_obj_path):
         print("Processing {}...".format(seq_name))
         
         seq_path = smpl_obj_path + "/" + seq_name
 
-        for image_name in os.listdir(seq_path):
+        image_list = os.listdir(seq_path)
+        image_list.sort()
+        #image_list = ["image_00139"]:cheating to process only one image
+
+        for image_name in image_list:
+            print(image_name)
             # initialize canvas and z-buffer
             global image_canvas
             image_canvas = np.zeros((image_height, image_width, 3), dtype=np.uint8)
