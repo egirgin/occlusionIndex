@@ -3,32 +3,104 @@ import numpy as np
 
 SMPL_NR_JOINTS = 24
 
-def match_models(preds, gts): # TODO calculate the distance for each pair and match them 
-    for pred in preds:
-        for gt in gts:
-            pass 
+def sort_by_order(array, order):
 
-def align_models(preds, gts):
-    """
-    If there are more preds then gt, then penalize it 
-    as if there is a gt with all zeros, and vice versa.
-    """
+    new_array = np.zeros((len(order), *array[0].shape))
+
+    for target_idx, current_idx in enumerate(order):
+        if current_idx != -1:
+            new_array[target_idx] = array[current_idx]
+
+    return new_array
+
+def rmse(pred, gt):
+
+    squared_errors = (pred - gt) ** 2
+
+    mse = np.mean(squared_errors)
+
+    rmse = np.sqrt(mse)
     
-    num_preds = preds.shape[0]
-    num_gt = gts.shape[0]
+    return rmse
 
-    if num_preds != num_gt:
-        max_number = np.max(num_preds, num_gt)
+
+def match_models(preds, gts, match_by = "root"):
+
+    distances = np.ones((len(preds), len(gts))) * float("inf")
+    
+    max_size = max(len(preds), len(gts))
+    min_size = min(len(preds), len(gts))
+
+    # Initialize arrays to store the matched pairs and flags to track whether an element has been matched
+    matched_pairs = np.full((max_size, 2), -1, dtype=int)
+    matched_pairs[:len(preds), 0] = np.arange(len(preds)) # first column is always fixed preds
+
+    matched_flags = np.zeros(len(gts), dtype=bool)
+
+    # calculate distance matrix
+    for i, matrix1 in enumerate(preds):
+        for j, matrix2 in enumerate(gts):
+
+            if match_by == "root":
+                norm = rmse(matrix1[0], matrix2[0])
+            elif match_by == "joints":
+                # Calculate the Frobenius norm for the difference between matrices
+                norm = np.linalg.norm(matrix1 - matrix2)
+            else:
+                # TODO
+                pass
+
+            distances[i, j] = norm
+
+    # match the preds with gts
+    for _ in range(min_size):
+
+        ind = np.unravel_index(np.argmin(distances, axis=None), distances.shape)
+
+        pred_index = ind[0]
+        gt_index = ind[1]
+
+        matched_pairs[pred_index] = [pred_index, gt_index]
+
+        distances[pred_index, :] = float("inf")
+        distances[:, gt_index] = float("inf")
+        matched_flags[gt_index] = True
+
+
+    # if there are more gts than preds, than add the rest as unordered way
+    if len(preds) < len(gts):
+        unmatched_indices = np.where(~matched_flags)[0]
+
+        for i, idx in enumerate(unmatched_indices):
+            matched_pairs[len(preds) + i][1] = idx
+
+    # if more gts than preds then match those gts with zero matrices
+    if len(preds) < len(gts):
+        # Sort gts based on matched indices
+        sorted_gts = np.zeros_like(gts)  # Initialize with zeros
+        for i, (preds_idx, gts_idx) in enumerate(matched_pairs):
+            # if num_gts > num_preds, gts_idx newer be -1
+            sorted_gts[i] = gts[gts_idx]
+
+        zero_matrices = np.zeros((len(gts) - len(preds), *preds[0].shape), dtype=preds.dtype)
+        appended_preds = np.append(preds, zero_matrices, axis=0)
+
+        preds = appended_preds
+        gts = sorted_gts
         
-        preds_new = np.zeros((max_number, 24, 3))
-        preds_new[:num_preds] = preds
-        preds = preds_new
+    # if more preds than gts then match those preds with zero matrices
+    if len(preds) > len(gts):
+        # Sort gts based on matched indices
+        sorted_gts = np.zeros_like(preds)  # Initialize with zeros
+        for i, (preds_idx, gts_idx) in enumerate(matched_pairs):
+            if gts_idx != -1:
+                sorted_gts[i] = gts[gts_idx]
+            else:
+                sorted_gts[i] = np.zeros((preds[0].shape), dtype=preds.dtype)
 
-        gts_new = np.zeros((max_number, 24, 3))
-        gts_new[:num_gt] = gts
-        gts = gts_new
+        gts = sorted_gts
     
-    return preds, gts 
+    return preds, gts, matched_pairs
 
 
 def compute_similarity_transform(S1, S2):
@@ -108,7 +180,7 @@ def align_by_root(joints):
     return joints - root
 
 
-def compute_errors(preds3d, gt3ds):
+def compute_mpjpe(preds3d, gt3ds, mask=None):
     """
     Gets MPJPE after root alignment + MPJPE after Procrustes.
     Evaluates on all the 24 joints joints.
@@ -120,10 +192,7 @@ def compute_errors(preds3d, gt3ds):
         MPJPE_PA : scalar- mean of all MPJPE_PA errors
     """
 
-    preds3d, gt3ds = align_models(preds=preds3d, gt=gt3ds)
-
     errors, errors_pa = [], []
-
 
     for i, (gt3d, pred3d) in enumerate(zip(gt3ds, preds3d)):
         # gt3d = gt3d.reshape(-1, 3)
@@ -131,17 +200,91 @@ def compute_errors(preds3d, gt3ds):
         gt3d = align_by_root(gt3d)
         pred3d = align_by_root(pred3d)
 
+        # Compute MPJPE_PA and also store similiarity matrices to apply them later to rotation matrices for MPJAE_PA
+        pred3d_sym, R = compute_similarity_transform(pred3d, gt3d)
+
+        if mask is not None:
+            gt3d = gt3d[mask[i], :]
+            pred3d = pred3d[mask[i], :]
+            pred3d_sym = pred3d_sym[mask[i], :]
+
         # Compute MPJPE
         joint_error = np.sqrt(np.sum((gt3d - pred3d) ** 2, axis=1))
         errors.append(np.mean(joint_error))
 
         # Compute MPJPE_PA and also store similiarity matrices to apply them later to rotation matrices for MPJAE_PA
-        pred3d_sym, R = compute_similarity_transform(pred3d, gt3d)
         pa_error = np.sqrt(np.sum((gt3d - pred3d_sym) ** 2, axis=1))
         errors_pa.append(np.mean(pa_error))
 
 
     return np.mean(np.array(errors)), np.mean(np.array(errors_pa))
 
-def shape_error(preds, groundtruths): # use maybe rmse for shape errors 
-    pass
+def compute_shape_error(preds, groundtruths): # use maybe rmse for shape errors 
+    return rmse(preds, groundtruths)
+
+def coco2smpl(coco_pose):
+    """
+    smpl_format = ["pelvis", "left_hip", "right_hip", "lower_spine", "left_knee", "right_knee", # 0-5
+        "middle_spine", "left_ankle", "right_ankle", "upper_spine", "left_foot", "right_foot", # 6-11
+        "neck", "left_collar", "right_collar", "head", "left_shoulder", "right_shoulder", # 12-17
+        "left_elbow", "right_elbow", "left_wrist", "right_wrist", "left_hand", "right_hand"] # 18-23
+
+    coco_format =  ['right_shoulder', 'right_elbow', 'right_wrist', 'left_shoulder',
+        'left_elbow', 'left_wrist', 'right_hip', 'right_knee', 'right_ankle',
+        'left_hip', 'left_knee', 'left_ankle', 'head', 'neck', 'right_ear',
+        'left_ear', 'nose', 'right_eye', 'left_eye']
+    """
+    smpl_pose = np.zeros(24)
+    common_joints = [(1, 9), (2, 6), (4, 10), (5, 7), (7, 11), (8, 8), (12, 13), (15, 12), (16, 3), (17, 0), (18, 4), (19, 1), (20, 5), (21, 2)]
+
+    for (smpl_joint, coco_joint) in common_joints:
+        smpl_pose[smpl_joint] = coco_pose[coco_joint]
+
+    smpl_pose[0] = smpl_pose[1] and smpl_pose[2] # pelvis = left_hip and right_hip
+    smpl_pose[3] = smpl_pose[0] # lower_spine = pelvis
+    smpl_pose[9] = smpl_pose[16] and smpl_pose[17] # upper_spine = left_shoulder and right_shoulder
+    smpl_pose[6] = smpl_pose[3] and smpl_pose[9] # middle_spine = lower_spine and upper_spine
+    smpl_pose[10] = smpl_pose[7] # left_foot = left_ankle
+    smpl_pose[11] = smpl_pose[8] # right_foot = right_ankle
+    smpl_pose[13] = smpl_pose[16] and smpl_pose[12] # left_collar = left_shoulder and neck
+    smpl_pose[14] = smpl_pose[17] and smpl_pose[12] # right_collar = right_shoulder and neck
+    smpl_pose[22] = smpl_pose[20] # left_hand = left_wrist
+    smpl_pose[23] = smpl_pose[21] # right_hand = right_wrist
+
+    return smpl_pose
+
+if __name__ == "__main__":
+
+    num_preds = 1
+    num_gts = 2
+
+    thetas_gt = np.random.rand(num_gts, 24, 3)
+    thetas_pred = np.random.rand(num_preds, 24, 3)
+
+    betas_gt = np.random.rand(num_gts, 10)
+    betas_pred = np.random.rand(num_preds, 10)
+
+    occlusion_mask = np.random.choice([True, False], size=(num_gts, 24))
+
+    # align if num preds and num gts do not match
+
+    thetas_pred, thetas_gt, matched_pairs = match_models(preds=thetas_pred, gts=thetas_gt, match_by="root")
+    
+    betas_pred = sort_by_order(array=betas_pred, order=matched_pairs[:,0])
+    betas_gt = sort_by_order(array=betas_gt, order=matched_pairs[:,1])
+
+    mpjpe, pa_mpjpe = compute_mpjpe(thetas_pred, thetas_gt, mask=occlusion_mask)
+
+    shape_error = compute_shape_error(betas_pred, betas_gt)
+
+    pose_coeff = 0.9
+    shape_coeff = 0.1
+
+    total_error = pose_coeff*mpjpe + shape_coeff*shape_error
+
+    print(total_error)
+    
+
+    coco2smpl(occlusion_mask[0])
+
+
