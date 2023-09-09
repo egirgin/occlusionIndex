@@ -222,36 +222,6 @@ def compute_mpjpe(preds3d, gt3ds, mask=None):
 def compute_shape_error(preds, groundtruths): # use maybe rmse for shape errors 
     return rmse(preds, groundtruths)
 
-def coco2smpl(coco_pose):
-    """
-    smpl_format = ["pelvis", "left_hip", "right_hip", "lower_spine", "left_knee", "right_knee", # 0-5
-        "middle_spine", "left_ankle", "right_ankle", "upper_spine", "left_foot", "right_foot", # 6-11
-        "neck", "left_collar", "right_collar", "head", "left_shoulder", "right_shoulder", # 12-17
-        "left_elbow", "right_elbow", "left_wrist", "right_wrist", "left_hand", "right_hand"] # 18-23
-
-    coco_format =  ['right_shoulder', 'right_elbow', 'right_wrist', 'left_shoulder',
-        'left_elbow', 'left_wrist', 'right_hip', 'right_knee', 'right_ankle',
-        'left_hip', 'left_knee', 'left_ankle', 'head', 'neck', 'right_ear',
-        'left_ear', 'nose', 'right_eye', 'left_eye']
-    """
-    smpl_pose = np.zeros(24)
-    common_joints = [(1, 9), (2, 6), (4, 10), (5, 7), (7, 11), (8, 8), (12, 13), (15, 12), (16, 3), (17, 0), (18, 4), (19, 1), (20, 5), (21, 2)]
-
-    for (smpl_joint, coco_joint) in common_joints:
-        smpl_pose[smpl_joint] = coco_pose[coco_joint]
-
-    smpl_pose[0] = smpl_pose[1] and smpl_pose[2] # pelvis = left_hip and right_hip
-    smpl_pose[3] = smpl_pose[0] # lower_spine = pelvis
-    smpl_pose[9] = smpl_pose[16] and smpl_pose[17] # upper_spine = left_shoulder and right_shoulder
-    smpl_pose[6] = smpl_pose[3] and smpl_pose[9] # middle_spine = lower_spine and upper_spine
-    smpl_pose[10] = smpl_pose[7] # left_foot = left_ankle
-    smpl_pose[11] = smpl_pose[8] # right_foot = right_ankle
-    smpl_pose[13] = smpl_pose[16] and smpl_pose[12] # left_collar = left_shoulder and neck
-    smpl_pose[14] = smpl_pose[17] and smpl_pose[12] # right_collar = right_shoulder and neck
-    smpl_pose[22] = smpl_pose[20] # left_hand = left_wrist
-    smpl_pose[23] = smpl_pose[21] # right_hand = right_wrist
-
-    return smpl_pose
 
 if __name__ == "__main__":
 
@@ -283,8 +253,4 @@ if __name__ == "__main__":
     total_error = pose_coeff*mpjpe + shape_coeff*shape_error
 
     print(total_error)
-    
-
-    coco2smpl(occlusion_mask[0])
-
 
