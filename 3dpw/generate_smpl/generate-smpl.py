@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
     only_multiperson = True
 
-    seq_list = ["courtyard_basketball_00"] # cheating to process only one seq
+    #seq_list = ["courtyard_basketball_00"] # cheating to process only one seq
 
     for seq_name in seq_list:
         print("-------------------------------------------------------")

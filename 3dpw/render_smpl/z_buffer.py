@@ -97,6 +97,7 @@ def render(faces, image_points, vertices, color):
 def main():
 
     smpl_obj_path = "/home/tuba/Documents/emre/thesis/occlusionIndex/3dpw/smpl_objects"
+    images_path = "/home/tuba/Documents/emre/thesis/dataset/3dpw/imageFiles"
 
     for seq_name in os.listdir(smpl_obj_path):
         print("Processing {}...".format(seq_name))
@@ -108,9 +109,12 @@ def main():
         #image_list = ["image_00139"]:cheating to process only one image
 
         for image_name in image_list:
+            image = cv2.imread(images_path + "/" + seq_name + "/" + image_name)
             print(image_name)
             # initialize canvas and z-buffer
-            global image_canvas
+            global image_canvas, image_width, image_height
+            image_height, image_width = image.shape[:2]
+            
             image_canvas = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
             global z_buffer
