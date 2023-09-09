@@ -42,21 +42,6 @@ def load_cam(cam_path):
 
     intrinsics = np.array(cam_data["intrinsics"])
     extrinsics = np.array(cam_data["extrinsics"])
-    """
-    # Define camera intrinsics
-    intrinsics = [[1.96185286e+03, 0.00000000e+00, 5.40000000e+02],
-                [0.00000000e+00, 1.96923077e+03, 9.60000000e+02],
-                [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]]
-
-
-    # Define camera extrinsics
-    extrinsics = np.array(
-        [[ 0.89695426,  0.0636676 , -0.43751513, -1.05262216],
-        [ 0.1627256 , -0.96765269,  0.19279172,  0.66311684],
-        [-0.41108811, -0.24412027, -0.87830055,  2.78461675],
-        [ 0.        ,  0.        ,  0.        ,  1.        ]]
-        )
-    """
 
     return intrinsics, extrinsics
 
@@ -111,7 +96,7 @@ def render(faces, image_points, vertices, color):
 
 def main():
 
-    smpl_obj_path = "/home/emre/Documents/master/repository/occlusionIndex/3dpw/generate_smpl/smpl_objects"
+    smpl_obj_path = "/home/tuba/Documents/emre/thesis/occlusionIndex/3dpw/smpl_objects"
 
     for seq_name in os.listdir(smpl_obj_path):
         print("Processing {}...".format(seq_name))
@@ -158,7 +143,7 @@ def main():
                 render(faces=faces_list[mesh_id], image_points=image_points_list[mesh_id], vertices=vertices_list[mesh_id], color=color_list[mesh_id])
 
             # save generated mask
-            save_path = "./masks/{}".format(seq_name)
+            save_path = "./3dpw/masks/{}".format(seq_name)
 
             os.makedirs(save_path, exist_ok=True)
 

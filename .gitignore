@@ -1,3 +1,5 @@
 ./methods/__pycache__
 ./methods/bev_results/*.jpg
 ./methods/romp_results/*.jpg
+./3dpw/smpl_objects
+./3dpw/masks

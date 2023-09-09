@@ -4,7 +4,8 @@ import pickle, json
 import cv2
 from smpl_np_romp import SMPLModel
 
-dataset_folder = "/home/emre/Documents/master/thesis/3dpw"
+dataset_folder = "/home/tuba/Documents/emre/thesis/dataset/3dpw"
+out_folder = "./3dpw/smpl_objects"
 
 class cam:
     pass
@@ -180,8 +181,6 @@ if __name__ == "__main__":
         print("Processing Sequence {}".format(seq_name))
 
         img_folder = os.listdir(dataset_folder + "/imageFiles/"+seq_name)
-
-        out_folder = "./smpl_objects"
         
         if seq_name+".pkl" in os.listdir(dataset_folder + "/sequenceFiles/sequenceFiles/train"):
             seq = get_seq(seq_name, subfolder="train")
@@ -197,7 +196,7 @@ if __name__ == "__main__":
             print("Skipping {} due to lack of multi person occlusion.".format(seq_name))
             continue 
 
-        smpl = SMPLModel('./model.pkl')
+        smpl = SMPLModel('/home/tuba/Documents/emre/thesis/models/converted/model.pkl')
 
         for frame_id in range(len(img_folder)): #range(0, 1):
             #print(frame_id)
