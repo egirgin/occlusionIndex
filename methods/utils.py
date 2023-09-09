@@ -77,25 +77,6 @@ def ochuman_annotation(im_filename):
 
     return thetas, betas
 
-def agora_annotation1234(im_filename):
-
-    smpl_path = im_filename[:-3] + "txt"
-
-    with open(smpl_path, "r") as smpl_gt_file:
-        smpl_gt = smpl_gt_file.read().splitlines()
-    
-    num_gt = len(smpl_gt)
-
-    thetas = np.zeros((num_gt, 24, 3))
-    betas = np.zeros((num_gt, 10))
-
-    for i in range(len(smpl_gt)):
-        smpl_dict = json.loads(smpl_gt[i])
-        thetas[i] = smpl_dict["parm_pose"]
-        betas[i] = smpl_dict["parm_shape"]
-
-    return thetas, betas
-
 def agora_annotation(annotation_filepath, smpl_path):
     """
     record = {
@@ -131,6 +112,34 @@ def agora_annotation(annotation_filepath, smpl_path):
 
         model_thetas = np.vstack((model_root_pose, model_body_pose))
 
+        thetas[model_id] = model_thetas
+        betas[model_id] = model_betas
+
+    return thetas, betas
+
+def annotation_3dpw(annotation_filepath, split="train"):
+    img_id = int(annotation_filepath.split("_")[-1][:-4])
+
+    seq_file_path = annotation_filepath[:-16].split("/")
+
+    seq_file_path.insert(-1, split)
+    seq_file_path = "/".join(seq_file_path)
+
+    seq_file_path = seq_file_path + ".pkl"
+
+    seq = pickle.load(open(seq_file_path, "rb"), encoding='latin1')
+    
+    num_models = len(seq["betas"])
+
+    thetas = np.zeros((num_models, 24, 3))
+    betas = np.zeros((num_models, 10))
+
+    for model_id in range(num_models):
+
+        model_betas = seq["betas"][model_id]
+
+        model_thetas = seq["poses"][model_id][img_id].reshape(24,3)
+        
         thetas[model_id] = model_thetas
         betas[model_id] = model_betas
 

@@ -8,7 +8,7 @@ from utils import agora_annotation, compute_error, coco2smpl
 
 global dataset, dataset_path, sublist, imglist_file, results_dir, save_results, model_type
 
-parser = argparse.ArgumentParser(description="ochuman arg parser")
+parser = argparse.ArgumentParser(description="agora arg parser")
 
 # Check the paths below for different configs
 parser.add_argument('-m', '--model', choices=["romp", "bev"], default="romp", help='Model to be used.')
@@ -27,7 +27,7 @@ dataset_parent_folder_path = "/home/tuba/Documents/emre/thesis/dataset/agora/dat
 dataset_imgs_path = dataset_parent_folder_path + "imgs/validation_images_1280x720/validation/"
 dataset_annotations_path = dataset_parent_folder_path + "cam/validation_annos/"
 dataset_smpl_path = dataset_parent_folder_path + "ground_truth/"
-scene = "archviz"
+scene = args.scene
 
 sublist = "{}_subset.txt".format(args.subset)
 imglist_file = "./methods/selected_frames/{}/{}/{}".format(dataset, scene, sublist)
@@ -85,27 +85,28 @@ if __name__ == '__main__':
         # get GTs
         thetas_gt, betas_gt = agora_annotation(annotation_filepath=dataset_annotations_path + im_filename, smpl_path= dataset_smpl_path)
         
-        if modified_mpjpe:
-            # TODO read from annotations
-            num_ppl = thetas_gt.shape[0]
-            occlusion_mask = np.random.choice([True, False], size=(num_ppl, 24))
-            occlusion_mask = coco2smpl(occlusion_mask)
-        else:
-            num_ppl = thetas_gt.shape[0]
-            occlusion_mask = np.random.choice([True], size=(num_ppl, 24))
-            occlusion_mask = coco2smpl(occlusion_mask)
         # predict
         outputs = model(cv2.imread(dataset_imgs_path + im_filename.split(".")[0] + "_1280x720.png"))  # please note that we take the input image in BGR format (cv2.imread).
         thetas_pred = outputs["smpl_thetas"].reshape(-1, 24, 3)
         betas_pred = outputs["smpl_betas"][:, :10].reshape(-1, 10)
-        
+
+        if modified_mpjpe:
+            # TODO read from annotations
+            num_ppl = max(thetas_gt.shape[0], thetas_pred.shape[0])
+            occlusion_mask = np.random.choice([True, False], size=(num_ppl, 24))
+            occlusion_mask = coco2smpl(occlusion_mask)
+        else:
+            num_ppl = max(thetas_gt.shape[0], thetas_pred.shape[0])
+            occlusion_mask = np.random.choice([True], size=(num_ppl, 24))
+            occlusion_mask = coco2smpl(occlusion_mask)
+
         mpjpe, pa_mpjpe = compute_error(thetas_pred=thetas_pred, thetas_gt=thetas_gt, 
                                         betas_pred=betas_pred, betas_gt=betas_gt, 
                                         occlusion_masks=occlusion_mask, pose_coeff=0.9, shape_coeff=0.1)
         
         errors.append(mpjpe)
         pa_errors.append(pa_mpjpe)
-        
+
         if save_results:
             cv2.imwrite("{}/{}".format(results_dir, im_filename), outputs["rendered_image"])
         break
