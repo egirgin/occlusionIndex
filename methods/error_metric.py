@@ -4,7 +4,7 @@ import numpy as np
 SMPL_NR_JOINTS = 24
 
 def sort_by_order(array, order):
-
+    
     new_array = np.zeros((len(order), *array[0].shape))
 
     for target_idx, current_idx in enumerate(order):

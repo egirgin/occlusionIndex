@@ -196,16 +196,16 @@ def get_smpl(smpl_path):
 
     return trans, betas, joints
 
-def dump_sorted(filename_list, index_list, subset_name, folder_name = "selected_frames"):
+def dump_sorted(filename_list, index_list, occ_status, subset_name, scene_name="archviz", folder_name = "../selected_frames"):
 
-    selected = zip(filename_list, index_list)
+    selected = zip(filename_list, index_list, occ_status)
     
     selected_sorted = sorted(selected, key=lambda x: x[1], reverse=True) # sort by occlusion value in descending order
     os.makedirs(folder_name, exist_ok=True)
 
-    with open(folder_name + "/" + subset_name+".txt", "w+") as dump_file :
+    with open(folder_name + "/" + scene_name + "/" + subset_name+".txt", "w+") as dump_file :
     
         for result in selected_sorted:
             dump_file.write(
-                "{} {}\n".format(result[0], result[1])
+                "{} {} #{}\n".format(result[0], result[1], result[2])
             )

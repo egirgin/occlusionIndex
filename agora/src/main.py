@@ -6,10 +6,10 @@ from occlusion_tools import occlusion_index, filter_by_criterion, form_criterion
 if __name__ == '__main__':
 
     dataset_config = {
-        "img_folder_path": "../data/imgs/validation_images_1280x720/validation",
+        "img_folder_path": "/home/tuba/Documents/emre/thesis/dataset/agora/data/imgs/validation_images_1280x720/validation",
         #"smpl_folder_path": "/home/tuba/Documents/emre/thesis/dataset/agora/smpl/",
-        "mask_folder_path": "../data/masks/validation_masks_1280x720/validation",
-        "cam_folder_path": "../data/cam/validation_annos",
+        "mask_folder_path": "/home/tuba/Documents/emre/thesis/dataset/agora/data/masks/validation_masks_1280x720/validation",
+        "cam_folder_path": "/home/tuba/Documents/emre/thesis/dataset/agora/data/cam/validation_annos",
     }
 
 
@@ -71,6 +71,7 @@ if __name__ == '__main__':
     criterion_mask = form_criterion(coco_subset[criterion])
     selected_imgs = []
     selected_occ_values = []
+    selected_occ_status = []
 
     duration = []
     
@@ -115,6 +116,7 @@ if __name__ == '__main__':
         if occluded_by_criteria:
             selected_imgs.append(img_filename)
             selected_occ_values.append(frame_occlusion_index)
+            selected_occ_status.append(["".join(frame_occ.astype(str)) for frame_occ in occlusion_status])
 
         # drawing
 
@@ -139,5 +141,5 @@ if __name__ == '__main__':
 
         duration.append(end_time-start_time)
 
-    dump_sorted(filename_list=selected_imgs, index_list=selected_occ_values, subset_name=criterion)
+    dump_sorted(filename_list=selected_imgs, index_list=selected_occ_values, occ_status=selected_occ_status, scene_name=img_config["scene"], subset_name=criterion)
     

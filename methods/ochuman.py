@@ -10,9 +10,11 @@ global dataset, dataset_path, sublist, imglist_file, results_dir, save_results, 
 
 parser = argparse.ArgumentParser(description="ochuman arg parser")
 
+subset_list = ["empty, head, torso, left_lower, left_upper, right_lower, right_upper", "right_body", "left_body", "upper_body", "lower_body"]
+
 # Check the paths below for different configs
 parser.add_argument('-m', '--model', choices=["romp", "bev"], default="romp", help='Model to be used.')
-parser.add_argument('-s', '--subset', choices=["empty, head, torso, left_lower, left_upper, right_lower, right_upper"], default="empty", help='Subset to be used')
+parser.add_argument('-s', '--subset', choices=subset_list, default="empty", help='Subset to be used')
 parser.add_argument('-e', '--error_modified', action='store_true', default=True, help='Use modified MPJPE')
 parser.add_argument('-d', '--save_results', action='store_true', default=True, help='Save results of model.')
 
@@ -27,7 +29,7 @@ dataset_imgs_path = dataset_parent_folder_path + "images/"
 dataset_smpl_path = dataset_parent_folder_path + "gtSMPL/"
 
 sublist = "{}_subset.txt".format(args.subset)
-imglist_file = "./methods/selected_frames/{}/{}".format(dataset, sublist)
+imglist_file = "./ochuman/selected_frames/{}".format(sublist)
 
 modified_mpjpe = args.error_modified
 
@@ -41,10 +43,14 @@ def get_img_list(selected_list_path):
         input_list = img_list.read().splitlines()
 
     filelist = []
+    occlusion_mask_list = []
     for frame in input_list:
         filelist.append(frame.split()[0])
+        occlusion_status = eval(frame.split("#")[-1])
+        occlusion_status = np.array([[int(char) for char in model_occ] for model_occ in occlusion_status], dtype=bool)
+        occlusion_mask_list.append(occlusion_status)
 
-    return filelist
+    return filelist, occlusion_mask_list
 
 if __name__ == '__main__':
     if model_type == "romp":
@@ -75,9 +81,9 @@ if __name__ == '__main__':
     errors = []
     pa_errors = []
 
-    input_list = get_img_list(imglist_file)
+    input_list, occlusion_mask_list = get_img_list(imglist_file)
 
-    for im_filename in input_list:
+    for idx, im_filename in enumerate(input_list):
 
         # get GTs
         thetas_gt, betas_gt = ochuman_annotation(im_filename=dataset_smpl_path + im_filename)
@@ -88,13 +94,12 @@ if __name__ == '__main__':
         betas_pred = outputs["smpl_betas"][:, :10].reshape(-1, 10)
         
         if modified_mpjpe:
-            # TODO read from annotations
-            num_ppl = max(thetas_gt.shape[0], thetas_pred.shape[0])
-            occlusion_mask = np.random.choice([True, False], size=(num_ppl, 24))
+            occlusion_mask = occlusion_mask_list[idx]
+            #print(occlusion_mask)
             occlusion_mask = coco2smpl(occlusion_mask)
         else:
             num_ppl = max(thetas_gt.shape[0], thetas_pred.shape[0])
-            occlusion_mask = np.random.choice([True], size=(num_ppl, 24))
+            occlusion_mask = np.ones((num_ppl, 24), dtype=bool)
             occlusion_mask = coco2smpl(occlusion_mask)
 
         mpjpe, pa_mpjpe = compute_error(thetas_pred=thetas_pred, thetas_gt=thetas_gt, 
@@ -108,7 +113,7 @@ if __name__ == '__main__':
             cv2.imwrite("{}/{}".format(results_dir, im_filename), outputs["rendered_image"])
         break # TODO
     
-    with open(results_dir+ "/results.txt", "w+") as result_file:
+    with open(results_dir+ "/results_modified_mpjpe{}.txt".format(modified_mpjpe), "w+") as result_file:
         mpjpe_s = "MPJPE for {} {}: {} \n".format(dataset, sublist[:-4], np.mean(errors))
         pa_mpjpe_s = "PA-MPJPE for {} {}: {} \n".format(dataset, sublist[:-4], np.mean(pa_errors))
         

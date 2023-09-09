@@ -1,2 +1,0 @@
-agora/image/train_images_1280x720_0/train_0/ag_trainset_renderpeople_bfh_archviz_5_10_cam02_00362_1280x720.png -> CI: 0.25263157894736843, CM:0.05263157894736842 
-Avg CI: 0.25263157894736843 | Avg CM: 0.05263157894736842

@@ -1,6 +1,14 @@
 methods/__pycache__/*
-methods/bev_results/*.jpg
-methods/romp_results/*.jpg
+methods/bev_results/*/*/*.jpg
+methods/bev_results/*/*/*/*.jpg
+methods/romp_results/*/*/*.jpg
+methods/romp_results/*/*/*/*.jpg
+
+agora/src/__pycache/*
+
+ochuman/src/__pycache/*
+ochuman/src/gtSMPL
+
 3dpw/smpl_objects/*
 3dpw/masks/*
 3dpw/generate_smpl/__pycache__/*

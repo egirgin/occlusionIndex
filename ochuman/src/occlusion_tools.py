@@ -91,6 +91,12 @@ coco_subset = {
 
     "head_subset" : [COCO_JOINT.HEAD, COCO_JOINT.NECK, COCO_JOINT.NOSE],
     "torso_subset" : [COCO_JOINT.RIGHT_SHOULDER, COCO_JOINT.RIGHT_HIP, COCO_JOINT.LEFT_SHOULDER, COCO_JOINT.LEFT_HIP],
+    
+    "left_body_subset" : COCO_SUBSET.left_upper_subset.value + COCO_SUBSET.left_lower_subset.value,
+    "right_body_subset" : COCO_SUBSET.right_upper_subset.value + COCO_SUBSET.right_lower_subset.value,
+    "upper_body_subset" : COCO_SUBSET.right_upper_subset.value + COCO_SUBSET.left_upper_subset.value,
+    "lower_body_subset" : COCO_SUBSET.left_upper_subset.value + COCO_SUBSET.left_lower_subset.value,
+
     "empty_subset" : []
 }
 
@@ -113,7 +119,7 @@ def filter_by_criterion(criterion, occlusion_status):
     for model_occlusion in occlusion_status:
         
         if all(model_occlusion[criterion]):
-            print(model_occlusion[criterion])
+            #print(model_occlusion[criterion])
             return True
     
     return False

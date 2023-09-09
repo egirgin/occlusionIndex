@@ -8,6 +8,7 @@ from utils import annotation_3dpw, compute_error, coco2smpl
 
 global dataset, dataset_path, sublist, imglist_file, results_dir, save_results, model_type
 
+subset_list = ["empty, head, torso, left_lower, left_upper, right_lower, right_upper", "right_body", "left_body", "upper_body", "lower_body"]
 scene_list = ["courtyard_basketball_00", "courtyard_dancing_00"]
 
 parser = argparse.ArgumentParser(description="3dpw arg parser")
@@ -45,8 +46,14 @@ def get_img_list(selected_list_path):
         input_list = img_list.read().splitlines()
 
     filelist = []
+    occlusion_mask_list = []
     for frame in input_list:
         filelist.append(frame.split()[0])
+        occlusion_status = eval(frame.split("#")[-1])
+        occlusion_status = np.array([[int(char) for char in model_occ] for model_occ in occlusion_status], dtype=bool)
+        occlusion_mask_list.append(occlusion_status)
+
+    return filelist, occlusion_mask_list
 
     return filelist
 

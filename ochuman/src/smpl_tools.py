@@ -31,9 +31,9 @@ def eft2smplPose(eft_pose):
     return smpl_pose
 
 
-def read_smpl(split="train"):
-    train_path = "../smpl_labels/OCHuman_train_ver10.json"
-    test_path = "../smpl_labels/OCHuman_test_ver10.json"
+def read_smpl(prefix, split="train"):
+    train_path = prefix + "smpl_labels/OCHuman_train_ver10.json"
+    test_path = prefix + "smpl_labels/OCHuman_test_ver10.json"
 
     if split == "train":
         smpl = get_json(train_path)

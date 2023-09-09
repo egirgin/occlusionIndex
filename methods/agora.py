@@ -8,12 +8,15 @@ from utils import agora_annotation, compute_error, coco2smpl
 
 global dataset, dataset_path, sublist, imglist_file, results_dir, save_results, model_type
 
+subset_list = ["empty, head, torso, left_lower, left_upper, right_lower, right_upper", "right_body", "left_body", "upper_body", "lower_body"]
+scene_list = ["archviz, brushifyforest, brushifygrasslands, construction, flowers, hdri_50mm"]
+
 parser = argparse.ArgumentParser(description="agora arg parser")
 
 # Check the paths below for different configs
 parser.add_argument('-m', '--model', choices=["romp", "bev"], default="romp", help='Model to be used.')
-parser.add_argument('-s', '--subset', choices=["empty, head, torso, left_lower, left_upper, right_lower, right_upper"], default="empty", help='Subset to be used')
-parser.add_argument('-c', '--scene', choices=["archviz, brushifyforest, brushifygrasslands, construction, flowers, hdri_50mm"], default="archviz", help='Scene of AGORA')
+parser.add_argument('-s', '--subset', choices=subset_list, default="empty", help='Subset to be used')
+parser.add_argument('-c', '--scene', choices=scene_list, default="archviz", help='Scene of AGORA')
 parser.add_argument('-e', '--error_modified', action='store_true', default=True, help='Use modified MPJPE')
 parser.add_argument('-d', '--save_results', action='store_true', default=True, help='Save results of model.')
 
@@ -30,7 +33,7 @@ dataset_smpl_path = dataset_parent_folder_path + "ground_truth/"
 scene = args.scene
 
 sublist = "{}_subset.txt".format(args.subset)
-imglist_file = "./methods/selected_frames/{}/{}/{}".format(dataset, scene, sublist)
+imglist_file = "./agora/selected_frames/{}/{}/{}".format(dataset, scene, sublist)
 
 modified_mpjpe = args.error_modified
 
@@ -44,8 +47,14 @@ def get_img_list(selected_list_path):
         input_list = img_list.read().splitlines()
 
     filelist = []
+    occlusion_mask_list = []
     for frame in input_list:
         filelist.append(frame.split()[0])
+        occlusion_status = eval(frame.split("#")[-1])
+        occlusion_status = np.array([[int(char) for char in model_occ] for model_occ in occlusion_status], dtype=bool)
+        occlusion_mask_list.append(occlusion_status)
+
+    return filelist, occlusion_mask_list
 
     return filelist
 

@@ -10,11 +10,10 @@ def get_json(path):
 
     return data
 
-def get_annos(split="train"):
-    train_json = "../ochuman.json"
-    test_json = "../ochuman_coco_format_test_range_0.00_1.00.json"
-    val_json = "../ochuman_coco_format_val_range_0.00_1.00.json"
-
+def get_annos(path):
+    train_json = path
+    #test_json = "../ochuman_coco_format_test_range_0.00_1.00.json"
+    #val_json = "../ochuman_coco_format_val_range_0.00_1.00.json"
 
     data = get_json(train_json)
 
@@ -115,9 +114,9 @@ def crowd_index(keypoints):
     return crowd_indices, crowd_keypoints_list
 
 
-def dump_sorted(filename_list, index_list, subset_name, folder_name = "selected_frames"):
+def dump_sorted(filename_list, index_list, occ_status, subset_name, folder_name = "../selected_frames"):
 
-    selected = zip(filename_list, index_list)
+    selected = zip(filename_list, index_list, occ_status)
     
     selected_sorted = sorted(selected, key=lambda x: x[1], reverse=True) # sort by occlusion value in descending order
     os.makedirs(folder_name, exist_ok=True)
@@ -126,6 +125,6 @@ def dump_sorted(filename_list, index_list, subset_name, folder_name = "selected_
     
         for result in selected_sorted:
             dump_file.write(
-                "{} {}\n".format(result[0], result[1])
+                "{} {} #{}\n".format(result[0], result[1], result[2])
             )
 
