@@ -1,18 +1,18 @@
-python main.py archviz head_subset
-python main.py archviz torso_subset
+python agora/src/main.py archviz head_subset
+python agora/src/main.py archviz torso_subset
 
-python main.py archviz right_upper_subset
-python main.py archviz left_upper_subset
+python agora/src/main.py archviz right_upper_subset
+python agora/src/main.py archviz left_upper_subset
 
-python main.py archviz right_lower_subset
-python main.py archviz left_lower_subset
+python agora/src/main.py archviz right_lower_subset
+python agora/src/main.py archviz left_lower_subset
 
-python main.py archviz right_body_subset
-python main.py archviz left_body_subset
-python main.py archviz upper_body_subset
-python main.py archviz lower_body_subset
+python agora/src/main.py archviz right_body_subset
+python agora/src/main.py archviz left_body_subset
+python agora/src/main.py archviz upper_body_subset
+python agora/src/main.py archviz lower_body_subset
 
-python main.py archviz empty_subset
+python agora/src/main.py archviz empty_subset
 
 
 

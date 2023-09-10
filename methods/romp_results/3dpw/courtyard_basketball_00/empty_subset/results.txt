@@ -1,2 +1,2 @@
-MPJPE for 3dpw empty_subset: 2.875577253686049 
-PA-MPJPE for 3dpw empty_subset: 0.21961193005326826 
+MPJPE for 3dpw empty_subset: 2.663868449274096 
+PA-MPJPE for 3dpw empty_subset: 0.24609184581678126 

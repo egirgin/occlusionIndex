@@ -41,15 +41,16 @@ def coco2smpl(coco_pose):
 
     return smpl_poses
 
-def compute_error(thetas_pred, thetas_gt, betas_pred, betas_gt, occlusion_masks, pose_coeff=0.9, shape_coeff=0.1):
+def compute_error(thetas_pred, thetas_gt, betas_pred, betas_gt, occlusion_masks=None, pose_coeff=0.9, shape_coeff=0.1):
 
     thetas_pred, thetas_gt, matched_pairs = match_models(preds=thetas_pred, gts=thetas_gt, match_by="root")
 
     betas_pred = sort_by_order(array=betas_pred, order=matched_pairs[:,0])
     betas_gt = sort_by_order(array=betas_gt, order=matched_pairs[:,1])
     occlusion_masks = sort_by_order(array=occlusion_masks, order=matched_pairs[:, 1])
-
-    occlusion_masks = np.invert(occlusion_masks.astype(bool))
+    
+    if occlusion_masks is not None:
+        occlusion_masks = np.invert(occlusion_masks.astype(bool))
 
     mpjpe, pa_mpjpe = compute_mpjpe(thetas_pred, thetas_gt, mask=occlusion_masks)
 

@@ -9,13 +9,19 @@ from utils import annotation_3dpw, compute_error, coco2smpl
 global dataset, dataset_path, sublist, imglist_file, results_dir, save_results, model_type
 
 subset_list = ["empty, head, torso, left_lower, left_upper, right_lower, right_upper", "right_body", "left_body", "upper_body", "lower_body"]
-scene_list = ["courtyard_basketball_00", "courtyard_dancing_00"]
+
+scene_list = ['courtyard_warmWelcome_00', 'courtyard_captureSelfies_00', 'downtown_cafe_00', 
+              'courtyard_dancing_01', 'courtyard_goodNews_00', 'downtown_arguing_00', 
+              'downtown_bus_00', 'courtyard_rangeOfMotions_01', 'courtyard_giveDirections_00', 
+              'courtyard_capoeira_00', 'courtyard_rangeOfMotions_00', 'courtyard_drinking_00', 
+              'courtyard_hug_00', 'courtyard_dancing_00', 'courtyard_basketball_00', 
+              'courtyard_shakeHands_00', 'downtown_bar_00', 'courtyard_arguing_00']
 
 parser = argparse.ArgumentParser(description="3dpw arg parser")
 
 # Check the paths below for different configs
 parser.add_argument('-m', '--model', choices=["romp", "bev"], default="romp", help='Model to be used.')
-parser.add_argument('-s', '--subset', choices=["empty, head, torso, left_lower, left_upper, right_lower, right_upper"], default="empty", help='Subset to be used')
+parser.add_argument('-s', '--subset', choices=subset_list, default="empty", help='Subset to be used')
 parser.add_argument('-c', '--scene', choices=scene_list, default="courtyard_basketball_00", help='Scene of 3DPW')
 parser.add_argument('-e', '--error_modified', action='store_true', default=True, help='Use modified MPJPE')
 parser.add_argument('-d', '--save_results', action='store_true', default=True, help='Save results of model.')
@@ -32,7 +38,7 @@ dataset_imgs_path = dataset_parent_folder_path + "imageFiles/{}/".format(scene)
 dataset_annotations_path = dataset_parent_folder_path + "sequenceFiles/sequenceFiles/{}/".format(scene)
 
 sublist = "{}_subset.txt".format(args.subset)
-imglist_file = "./methods/selected_frames/{}/{}/{}".format(dataset, scene, sublist)
+imglist_file = "./3dpw/selected_frames/{}/{}".format(scene, sublist)
 
 modified_mpjpe = args.error_modified
 
@@ -54,8 +60,6 @@ def get_img_list(selected_list_path):
         occlusion_mask_list.append(occlusion_status)
 
     return filelist, occlusion_mask_list
-
-    return filelist
 
 if __name__ == '__main__':
     if model_type == "romp":
@@ -86,11 +90,9 @@ if __name__ == '__main__':
     errors = []
     pa_errors = []
 
-    #input_list = get_img_list(imglist_file)
-    input_list = ["image_00219.jpg", "image_00142.jpg"]
+    input_list, occlusion_mask_list = get_img_list(imglist_file)
 
-    for im_filename in input_list:
-        
+    for idx, im_filename in enumerate(input_list):
         # get GTs
         thetas_gt, betas_gt = annotation_3dpw(annotation_filepath=dataset_annotations_path + im_filename, split="train")
         
@@ -118,7 +120,6 @@ if __name__ == '__main__':
         
         if save_results:
             cv2.imwrite("{}/{}".format(results_dir, im_filename), outputs["rendered_image"])
-        break
     
     with open(results_dir+ "/results.txt", "w+") as result_file:
         mpjpe_s = "MPJPE for {} {}: {} \n".format(dataset, sublist[:-4], np.mean(errors))

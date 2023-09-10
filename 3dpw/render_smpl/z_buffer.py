@@ -1,7 +1,7 @@
 import trimesh
 import numpy as np
 import cv2
-import os
+import os, time
 import json
 
 global image_width, image_height, image_canvas, z_buffer
@@ -98,8 +98,15 @@ def main():
 
     smpl_obj_path = "/home/tuba/Documents/emre/thesis/occlusionIndex/3dpw/smpl_objects"
     images_path = "/home/tuba/Documents/emre/thesis/dataset/3dpw/imageFiles"
+    
+    seq_list = ['courtyard_dancing_01', 'courtyard_goodNews_00',
+                'courtyard_giveDirections_00', 'courtyard_hug_00', 
+                'courtyard_dancing_00', 'courtyard_shakeHands_00', 
+                'downtown_bar_00','courtyard_warmWelcome_00', 
+                'courtyard_captureSelfies_00', 'courtyard_basketball_00',  ]
 
-    for seq_name in os.listdir(smpl_obj_path):
+    for seq_name in seq_list:
+        
         print("Processing {}...".format(seq_name))
         
         seq_path = smpl_obj_path + "/" + seq_name
@@ -107,14 +114,19 @@ def main():
         image_list = os.listdir(seq_path)
         image_list.sort()
         #image_list = ["image_00139"]:cheating to process only one image
+        
+        duration = []
 
-        for image_name in image_list:
-            image = cv2.imread(images_path + "/" + seq_name + "/" + image_name)
-            print(image_name)
+        for frame_id, image_name in enumerate(image_list):
+            start_time = time.time()
+            remaining_secs = np.mean(duration)*(len(image_list)-frame_id)
+            print("%{:.2f} Processing {}/{}... ETA: {:.0f}mins {:.0f}secs".format(frame_id*100/len(image_list), seq_name, image_name, remaining_secs//60, remaining_secs%60))
+            
+            image = cv2.imread(images_path + "/" + seq_name + "/" + image_name + ".jpg")
             # initialize canvas and z-buffer
             global image_canvas, image_width, image_height
             image_height, image_width = image.shape[:2]
-            
+
             image_canvas = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
             global z_buffer
@@ -157,6 +169,9 @@ def main():
             # cv2.imshow('result', image_canvas)
             # cv2.waitKey(0)
             # cv2.destroyAllWindows()
+
+            end_time = time.time()
+            duration.append(end_time-start_time)
 
 
 if __name__ == "__main__":

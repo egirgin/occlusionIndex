@@ -192,6 +192,11 @@ def compute_mpjpe(preds3d, gt3ds, mask=None):
         MPJPE_PA : scalar- mean of all MPJPE_PA errors
     """
 
+    num_models = len(gt3ds)
+    if mask is None: # if mask is none, this means use the original MPJPE and take all joints into accont
+        mask = np.ones((num_models, 24), dtype=bool)
+
+
     errors, errors_pa = [], []
 
     for i, (gt3d, pred3d) in enumerate(zip(gt3ds, preds3d)):
@@ -201,13 +206,18 @@ def compute_mpjpe(preds3d, gt3ds, mask=None):
         pred3d = align_by_root(pred3d)
 
         # Compute MPJPE_PA and also store similiarity matrices to apply them later to rotation matrices for MPJAE_PA
-        pred3d_sym, R = compute_similarity_transform(pred3d, gt3d)
+        pred3d_sym, R = compute_similarity_transform(pred3d, gt3d)  
 
-        if mask is not None:
+        if not any(mask[i]): # if mask is all False, it means the model is completely invisible
+            # so do not take that into account
+            errors.append(0)
+            errors_pa.append(0)
+            continue
+        else:
             gt3d = gt3d[mask[i], :]
             pred3d = pred3d[mask[i], :]
             pred3d_sym = pred3d_sym[mask[i], :]
-
+        
         # Compute MPJPE
         joint_error = np.sqrt(np.sum((gt3d - pred3d) ** 2, axis=1))
         errors.append(np.mean(joint_error))

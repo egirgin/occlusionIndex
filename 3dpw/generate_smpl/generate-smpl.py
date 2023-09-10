@@ -196,7 +196,8 @@ if __name__ == "__main__":
             print("Skipping {} due to lack of multi person occlusion.".format(seq_name))
             continue 
 
-        smpl = SMPLModel('/home/tuba/Documents/emre/thesis/models/converted/model.pkl')
+        smpl_m = SMPLModel('/home/tuba/Documents/emre/thesis/models/converted/SMPL_MALE.pkl')
+        smpl_f = SMPLModel('/home/tuba/Documents/emre/thesis/models/converted/SMPL_FEMALE.pkl')
 
         for frame_id in range(len(img_folder)): #range(0, 1):
             #print(frame_id)
@@ -218,11 +219,18 @@ if __name__ == "__main__":
             for model_id in range(len(seq["poses"])):
 
                 betas, clothed_betas, gender = get_smpl_betas(seq, model_id)
-                
+                if gender == "f":
+                    smpl = smpl_f
+                elif gender == "m":
+                    smpl = smpl_m
+                else:
+                    print("Gender not defined...")
+                    sys.exit()
+
                 beta = betas[:10].reshape(smpl.beta_shape)  # (np.random.rand(*smpl.beta_shape) - 0.5) * 0.06
 
                 thetas, trans = get_smpl_thetas(seq, model_id, frame_id)
-
+                
                 pose = thetas.reshape(smpl.pose_shape)  # (np.random.rand(*smpl.pose_shape) - 0.5) * 0.4
                 trans = trans.reshape(smpl.trans_shape)  # np.zeros(smpl.trans_shape)
 

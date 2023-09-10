@@ -1,6 +1,15 @@
 import cv2, os
 import numpy as np
 
+color_list = [
+    [255, 0, 0], # red
+    [0, 0, 255], # blue
+    [179, 179, 179], # pink
+    [230, 230, 230], # neutral
+    [179, 192, 128], # capsule
+    [128, 179, 192] # yellow
+]
+
 def show_im(img):
 
     cv2.imshow("window_name", img)
@@ -23,10 +32,10 @@ def read_im(img_path, scale=1, show=False):
 
     return img
 
-def save_processed_img(img, img_filename, folder_path="./agora/processed_imgs"):
-	os.makedirs(folder_path, exist_ok=True)
+def save_processed_img(img, img_filename, scene_name="courtyard_basketball_00", folder_path="./3dpw/processed_imgs"):
+	os.makedirs(folder_path + "/" + scene_name, exist_ok=True)
 
-	cv2.imwrite("{}/{}".format(folder_path, img_filename), img)
+	cv2.imwrite("{}/{}/{}".format(folder_path, scene_name, img_filename), img)
 
 def draw_bboxes(image, bboxes, colors, index_values):
 
@@ -43,7 +52,7 @@ def draw_bboxes(image, bboxes, colors, index_values):
 
         image = cv2.rectangle(image, left_top, right_bottom, colors[model_id], 2)
         if index_values != None:
-            image = cv2.putText(image, "{:.2f}".format(index_values[model_id]), left_top, cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 1)
+            image = cv2.putText(image, "{:.2f}".format(index_values[model_id]), left_top, cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3)
 
     return image
 
@@ -54,9 +63,9 @@ def draw_keypoints(image, keypoints, occlusion_status, only_occluded=False):
     for model_id in range(num_models):
         for kp_id, kp in enumerate(keypoints[model_id]):
             if only_occluded and occlusion_status[model_id][kp_id]:
-                image = cv2.circle(image, (int(kp[0]), int(kp[1])), 1, (0, 0, 255), 2)
+                image = cv2.circle(image, (int(kp[0]), int(kp[1])), 1, (255, 255, 255), 2)
             else:
-                image = cv2.circle(image, (int(kp[0]), int(kp[1])), 1, (0, 0, 255), 2)
+                image = cv2.circle(image, (int(kp[0]), int(kp[1])), 3, (255, 255, 255), 4)
             #image = cv2.putText(image, "{}".format(occlusion_status[model_id, kp_id]), (int(kp[0]), int(kp[1])), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
     return image
 
