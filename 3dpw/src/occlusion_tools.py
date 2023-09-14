@@ -1,9 +1,9 @@
+import numpy as np
 from visualize import *
 from utils import *
 from enum import Enum
 
 def occlusion_index(mask, keypoints, colormap=color_list):
-
     num_models = len(keypoints)    
     
     occluded_keypoints_list = np.zeros((num_models, 19), dtype=int) # 1 means occluded, 0 means visible 
@@ -26,6 +26,12 @@ def occlusion_helper(mask, keypoints, model_color):
     # keypoints: occluded
     # person color code: occluded
     height, width = mask.shape[:2]
+    xs = keypoints[:, 0]
+    ys = keypoints[:, 1]
+
+    if np.all(xs <= 0) or np.all(xs >= height) or np.all(ys <= 0) or np.all(ys >= width):
+        # if one of the models is completely outside of the canvas, count it as all visible 
+        return 0, np.zeros(19, dtype=int)
 
     occluded_keypoints = np.zeros(19, dtype=int) # 1 means occluded, 0 means visible 
 
@@ -33,7 +39,7 @@ def occlusion_helper(mask, keypoints, model_color):
         pixel_coords = [int(np.floor(keypoint[1])), int(np.floor(keypoint[0]))]
         
         # if a keypoint is out of the canvas, count it as occluded
-        if pixel_coords[0] >= height or pixel_coords[1] >= width:
+        if pixel_coords[0] <= 0 or pixel_coords[0] >= height or pixel_coords[1] <= 0 or pixel_coords[1] >= width:
             occluded_keypoints[kp_id] = 1
             continue
 
@@ -122,20 +128,11 @@ joint_list =  ['right_shoulder', 'right_elbow', 'right_wrist', 'left_shoulder',
 def filter_by_criterion(criterion, occlusion_status):
     for model_occlusion in occlusion_status:
         
-        if all(model_occlusion[criterion]):
+        if np.all(model_occlusion[criterion]):
             #print(model_occlusion[criterion])
             return True
     
     return False
-
-
-
-
-
-
-
-
-
 
 
 def crowd_metric(bbox, keypoints):

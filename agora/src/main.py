@@ -6,12 +6,13 @@ from occlusion_tools import occlusion_index, filter_by_criterion, form_criterion
 if __name__ == '__main__':
 
     dataset_config = {
-        "img_folder_path": "/home/tuba/Documents/emre/thesis/dataset/agora/data/imgs/validation_images_1280x720/validation",
+        "img_folder_path": "/home/tuba/Documents/emre/thesis/dataset/agora/data/imgs/validation_images_1280x720/validation/",
         #"smpl_folder_path": "/home/tuba/Documents/emre/thesis/dataset/agora/smpl/",
         "mask_folder_path": "/home/tuba/Documents/emre/thesis/dataset/agora/data/masks/validation_masks_1280x720/validation",
         "cam_folder_path": "/home/tuba/Documents/emre/thesis/dataset/agora/data/cam/validation_annos",
     }
 
+    subset_list = ["empty", "head", "torso", "left_lower", "left_upper", "right_lower", "right_upper", "right_body", "left_body", "upper_body", "lower_body"]
 
     """
     scene options:
@@ -44,42 +45,60 @@ if __name__ == '__main__':
         "resolution": "1280x720"
     }
 
-    if img_config["scene"] == "archviz":
-        scene_length = 259
-    elif img_config["scene"] == "brushifyforest":
-        scene_length = 258
-    elif img_config["scene"] == "brushifygrasslands":
-        scene_length = 259
-    elif img_config["scene"] == "construction":
-        scene_length = 256
-    elif img_config["scene"] == "flowers":
-        scene_length = 259
-    elif img_config["scene"] == "hdri_50mm":
-        scene_length = 258
-    else:
-        sys.exit()
+    img_list = [img_filename for img_filename in os.listdir(dataset_config["img_folder_path"]) if img_config["scene"] in img_filename ]
+    scene_length = len(img_list)
+
+    #if img_config["scene"] == "archviz":
+    #    scene_length = 259
+    #elif img_config["scene"] == "brushifyforest":
+    #    scene_length = 258
+    #elif img_config["scene"] == "brushifygrasslands":
+    #    scene_length = 259
+    #elif img_config["scene"] == "construction":
+    #    scene_length = 256
+    #elif img_config["scene"] == "flowers":
+    #    scene_length = 259
+    #elif img_config["scene"] == "hdri_50mm":
+    #    scene_length = 258
+    #else:
+    #    sys.exit()
 
 
     # flags
     scale = 1
     
-    if len(sys.argv) > 2:
-        criterion = sys.argv[2]
-    else:
-        criterion = "head_subset"
+    #if len(sys.argv) > 2:
+    #    criterion = sys.argv[2]
+    #else:
+    #    criterion = "head_subset"
 
-    draw = criterion == "empty_subset"
+    #draw = criterion == "empty_subset"
+    
+    draw = True
+    
+    #criterion_mask = form_criterion(coco_subset[criterion])
+    #selected_imgs = []
+    #selected_occ_values = []
+    #selected_occ_status = []
 
-    criterion_mask = form_criterion(coco_subset[criterion])
-    selected_imgs = []
-    selected_occ_values = []
-    selected_occ_status = []
+    criterion_mask_per_subset = {}
+
+    selected_imgs_per_subset = {}
+    selected_occ_values_per_subset = {}
+    selected_occ_status_per_subset = {}
+
+    for idx, subset_name in enumerate(subset_list):
+        criterion_mask_per_subset[subset_name] = form_criterion(coco_subset[subset_name + "_subset"])
+        selected_imgs_per_subset[subset_name] = []
+        selected_occ_values_per_subset[subset_name] = [] 
+        selected_occ_status_per_subset[subset_name] = []
 
     duration = []
     
     for frame_id in range(scene_length):
         start_time = time.time()
         img_path, img_filename = construct_img_path(dataset_config, img_config, frame_id=frame_id)
+
         remaining_secs = np.mean(duration)*(scene_length-frame_id)
         print("%{:.2f} Processing {}... ETA: {:.0f}mins {:.0f}secs".format(frame_id*100/scene_length, img_filename, remaining_secs//60, remaining_secs%60))
 
@@ -89,7 +108,7 @@ if __name__ == '__main__':
             print("Image does not exists")
             continue
         
-        annotation = read_anno(dataset_config=dataset_config, img_filename=img_filename)
+        annotation = read_anno(dataset_config=dataset_config, img_filename=img_filename) # remove _1280x720 part
         keypoints2d = np.array(annotation["keypoints2d"]) * (720/2160) # from 4K to HD
         keypoints2d = agora2coco(keypoints2d)
         
@@ -113,12 +132,21 @@ if __name__ == '__main__':
 
         # body part occlusion
 
-        occluded_by_criteria = filter_by_criterion(criterion=criterion_mask, occlusion_status=occlusion_status)
+        #occluded_by_criteria = filter_by_criterion(criterion=criterion_mask, occlusion_status=occlusion_status)
 
-        if occluded_by_criteria:
-            selected_imgs.append(img_filename)
-            selected_occ_values.append(frame_occlusion_index)
-            selected_occ_status.append(["".join(frame_occ.astype(str)) for frame_occ in occlusion_status])
+        #if occluded_by_criteria:
+        #    selected_imgs.append(img_filename)
+        #    selected_occ_values.append(frame_occlusion_index)
+        #    selected_occ_status.append(["".join(frame_occ.astype(str)) for frame_occ in occlusion_status])
+
+        # body part occlusion
+        for subset_name in criterion_mask_per_subset.keys():
+            occluded_by_criteria = filter_by_criterion(criterion=criterion_mask_per_subset[subset_name], occlusion_status=occlusion_status)
+
+            if occluded_by_criteria:
+                selected_imgs_per_subset[subset_name].append(img_filename)
+                selected_occ_values_per_subset[subset_name].append(frame_occlusion_index)
+                selected_occ_status_per_subset[subset_name].append(["".join(frame_occ.astype(str)) for frame_occ in occlusion_status])
 
         # drawing
 
@@ -143,5 +171,10 @@ if __name__ == '__main__':
 
         duration.append(end_time-start_time)
 
-    dump_sorted(filename_list=selected_imgs, index_list=selected_occ_values, occ_status=selected_occ_status, scene_name=img_config["scene"], subset_name=criterion)
-    
+    #dump_sorted(filename_list=selected_imgs, index_list=selected_occ_values, occ_status=selected_occ_status, scene_name=img_config["scene"], subset_name=criterion)
+    for subset_name in criterion_mask_per_subset.keys():
+        dump_sorted(filename_list=selected_imgs_per_subset[subset_name], 
+                    index_list=selected_occ_values_per_subset[subset_name], 
+                    occ_status=selected_occ_status_per_subset[subset_name], 
+                    scene_name=img_config["scene"], 
+                    subset_name=subset_name)

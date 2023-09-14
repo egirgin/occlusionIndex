@@ -76,8 +76,9 @@ def estimate_from_3d(seq, frame_id, model_id):
 
 
 def approximate_bb(keypoints):
-    x_offset = 10
-    y_offset = 10
+    x_offset = 30
+    y_offset_max = 80
+    y_offset_min = 130
 
     xs = keypoints.T[0]
     ys = keypoints.T[1]
@@ -85,8 +86,8 @@ def approximate_bb(keypoints):
     x_min = int(xs.min()) - x_offset
     x_max = int(xs.max()) + x_offset
 
-    y_min = int(ys.min()) - y_offset
-    y_max = int(ys.max()) + y_offset
+    y_min = int(ys.min()) - y_offset_min
+    y_max = int(ys.max()) + y_offset_max
 
     top_left = [x_min, y_min]
 

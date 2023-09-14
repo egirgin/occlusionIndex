@@ -22,15 +22,13 @@ if __name__ == '__main__':
         'courtyard_capoeira_00', 'courtyard_rangeOfMotions_00', 'courtyard_drinking_00', 'courtyard_arguing_00'
     ]
     
-    subset_list = ["empty, head, torso, left_lower, left_upper, right_lower, right_upper", "right_body", "left_body", "upper_body", "lower_body"]
+    subset_list = ["empty", "head", "torso", "left_lower", "left_upper", "right_lower", "right_upper", "right_body", "left_body", "upper_body", "lower_body"]
 
     ################################################################################################################
     parser = argparse.ArgumentParser(description="3dpw arg parser")
 
     # Check the paths below for different configs
     parser.add_argument('-s', '--scene', choices=scene_list + ['all'],  default="courtyard_basketball_00", help='Scene of 3DPW')
-    parser.add_argument('-c', '--criteria', choices=subset_list,  default="empty", help='Subset of occlusion by body part')
-    parser.add_argument('-d', '--save_results', action='store_true', default=True, help='Save visual results.')
 
     args = parser.parse_args()
     ################################################################################################################
@@ -38,10 +36,10 @@ if __name__ == '__main__':
     if args.scene != "all":
         scene_list = [args.scene]
     
-    criterion = args.criteria + "_subset"
-    draw = criterion == "empty_subset"
+    draw = True
 
     for scene_name in scene_list:
+
         scene_path = dataset_config["img_folder_path"] + scene_name
         scene_length = len(os.listdir(scene_path))
 
@@ -57,11 +55,18 @@ if __name__ == '__main__':
         else:
             print("Sequence {} could not be found!".format(scene_name))
             sys.exit()
-        
-        criterion_mask = form_criterion(coco_subset[criterion])
-        selected_imgs = []
-        selected_occ_values = []
-        selected_occ_status = []
+
+        criterion_mask_per_subset = {}
+
+        selected_imgs_per_subset = {}
+        selected_occ_values_per_subset = {}
+        selected_occ_status_per_subset = {}
+
+        for idx, subset_name in enumerate(subset_list):
+           criterion_mask_per_subset[subset_name] = form_criterion(coco_subset[subset_name + "_subset"])
+           selected_imgs_per_subset[subset_name] = []
+           selected_occ_values_per_subset[subset_name] = [] 
+           selected_occ_status_per_subset[subset_name] = []
 
         duration = []
         
@@ -72,7 +77,7 @@ if __name__ == '__main__':
             img_path = dataset_config["img_folder_path"] + scene_name + "/" + image_filename
 
             remaining_secs = np.mean(duration)*(scene_length-frame_id)
-            print("%{:.2f} Processing {}... ETA: {:.0f}mins {:.0f}secs".format(frame_id*100/scene_length, image_filename, remaining_secs//60, remaining_secs%60))
+            print("%{:.2f} Processing {}'s {}... ETA: {:.0f}mins {:.0f}secs".format(frame_id*100/scene_length, scene_name, image_filename, remaining_secs//60, remaining_secs%60))
             
             try: # continue if that img does not exists
                 img = read_im(img_path, show=False)
@@ -111,13 +116,13 @@ if __name__ == '__main__':
             frame_occlusion_index = np.mean(occlusion_indices)
 
             # body part occlusion
+            for subset_name in criterion_mask_per_subset.keys():
+                occluded_by_criteria = filter_by_criterion(criterion=criterion_mask_per_subset[subset_name], occlusion_status=occlusion_status)
 
-            occluded_by_criteria = filter_by_criterion(criterion=criterion_mask, occlusion_status=occlusion_status)
-
-            if occluded_by_criteria:
-                selected_imgs.append(image_filename)
-                selected_occ_values.append(frame_occlusion_index)
-                selected_occ_status.append(["".join(frame_occ.astype(str)) for frame_occ in occlusion_status])
+                if occluded_by_criteria:
+                    selected_imgs_per_subset[subset_name].append(image_filename)
+                    selected_occ_values_per_subset[subset_name].append(frame_occlusion_index)
+                    selected_occ_status_per_subset[subset_name].append(["".join(frame_occ.astype(str)) for frame_occ in occlusion_status])
 
             # drawing
 
@@ -136,11 +141,16 @@ if __name__ == '__main__':
                 occlusion_img = draw_masks(occlusion_img, mask=mask)
 
                 #show_im(occlusion_img)
-                save_processed_img(occlusion_img, image_filename)
+                save_processed_img(occlusion_img, image_filename, scene_name=scene_name)
 
             end_time = time.time()
 
             duration.append(end_time-start_time)
-            
-        dump_sorted(filename_list=selected_imgs, index_list=selected_occ_values, occ_status=selected_occ_status, scene_name=scene_name, subset_name=criterion)
+        
+        for subset_name in criterion_mask_per_subset.keys():
+            dump_sorted(filename_list=selected_imgs_per_subset[subset_name], 
+                        index_list=selected_occ_values_per_subset[subset_name], 
+                        occ_status=selected_occ_status_per_subset[subset_name], 
+                        scene_name=scene_name, 
+                        subset_name=subset_name)
         

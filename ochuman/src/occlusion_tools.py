@@ -118,7 +118,7 @@ joint_list =  ['right_shoulder', 'right_elbow', 'right_wrist', 'left_shoulder',
 def filter_by_criterion(criterion, occlusion_status):
     for model_occlusion in occlusion_status:
         
-        if all(model_occlusion[criterion]):
+        if np.all(model_occlusion[criterion]):
             #print(model_occlusion[criterion])
             return True
     

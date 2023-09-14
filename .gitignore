@@ -16,4 +16,5 @@ ochuman/src/gtSMPL
 3dpw/smpl_objects/*
 3dpw/processed_imgs
 3dpw/masks/*
+3dpw/3dpw_masks.zip
 3dpw/generate_smpl/__pycache__/*
