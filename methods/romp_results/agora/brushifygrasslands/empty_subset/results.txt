@@ -1,2 +1,0 @@
-MPJPE for agora empty_subset: 1.3121155349116704 
-PA-MPJPE for agora empty_subset: 0.6278980820025306 

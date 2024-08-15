@@ -1,2 +1,0 @@
-MPJPE for ochuman empty_subset: 2.2178068537527573 
-PA-MPJPE for ochuman empty_subset: 0.3856646279699474 

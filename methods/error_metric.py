@@ -23,6 +23,149 @@ def rmse(pred, gt):
     
     return rmse
 
+def match_neutral(fixed, changed, keypoints2d_gt, keypoints2d_pred, match_by = "root"):
+    """
+    fixed: Nx24x3 matrix
+    changed: Mx24x3 matrix
+    match each N to each M sorted by fixed.
+    We keep fixed fixed and find each pair from changed
+    """
+    n_fixed = fixed.shape[0]
+    n_changed = changed.shape[0]
+
+    distances = np.ones((n_fixed, n_changed)) * float("inf")
+    
+    max_size = max(n_fixed, n_changed)
+    min_size = min(n_fixed, n_changed)
+
+    # Initialize arrays to store the matched pairs and flags to track whether an element has been matched
+    matched_pairs = np.full((max_size, 2), -1, dtype=int)
+    matched_pairs[:n_fixed, 0] = np.arange(n_fixed) # first column is always fixed
+
+    matched_flags = np.zeros(n_changed, dtype=bool) 
+
+    # calculate distance matrix. the way you calculate the distance may differ
+    for i, matrix1 in enumerate(fixed):
+        
+        if match_by != "keypoints2d":
+            matrix1 = matrix1 - matrix1[0, :]
+        for j, matrix2 in enumerate(changed):
+
+            if match_by != "keypoints2d":
+                matrix2 = matrix2 - matrix2[0, :]
+                matrix2, R = compute_similarity_transform(matrix2.copy(), matrix1.copy())  
+
+            if match_by == "root":
+                norm = rmse(matrix1[0], matrix2[0])
+            elif match_by == "joints":
+                # Calculate the Frobenius norm for the difference between matrices
+                norm = np.linalg.norm(matrix1[1:] - matrix2[1:])
+            elif match_by == "mpjpe":
+                norm = np.sqrt(np.sum((matrix1 - matrix2) ** 2, axis=1))
+                norm = np.mean(norm)
+            elif match_by == "keypoints2d":
+                norm = np.sqrt(np.sum((keypoints2d_gt[i] - keypoints2d_pred[j]) ** 2, axis=1))
+                norm = np.mean(norm)
+                #norm = np.linalg.norm(keypoints2d_gt[i] - keypoints2d_pred[j])
+            else:
+                # TODO
+                pass
+
+            distances[i, j] = norm
+    #print(distances)
+    distances_copy = distances.copy()
+
+    # match the changed with fixed
+    for _ in range(min_size):
+
+        ind = np.unravel_index(np.argmin(distances, axis=None), distances.shape)
+
+        fixed_index = ind[0]
+        changed_index = ind[1]
+
+        # match elements from fixed to changed, keeping fixed fixed. 
+        matched_pairs[fixed_index] = [fixed_index, changed_index]
+
+        # drop the matched samples from table
+        distances[fixed_index, :] = float("inf")
+        distances[:, changed_index] = float("inf")
+
+        # assign the element from changed as matched
+        matched_flags[changed_index] = True
+
+        # if there are more changed than fixed, than add the rest as unordered way
+    if n_fixed < n_changed:
+        unmatched_indices = np.where(~matched_flags)[0]
+
+        for i, idx in enumerate(unmatched_indices):
+            matched_pairs[n_fixed + i][1] = idx
+            matched_pairs[n_fixed + i][0] = np.argmin(distances_copy[:, idx]) # match the excessive with the closest fixed
+
+        # Sort changed based on matched indices
+        sorted_changed = np.zeros_like(changed)  # Initialize with zeros
+        sorted_fixed = np.zeros_like(changed) 
+
+        for i, (fixed_idx, changed_idx) in enumerate(matched_pairs):
+            # if n_changed > n_fixed, changed_idx newer be -1
+            sorted_changed[i] = changed[changed_idx]
+            sorted_fixed[i] = fixed[fixed_idx]
+        
+        fixed = sorted_fixed
+        changed = sorted_changed
+        
+    # if more fixed than changed then match those preds with zero matrices
+    if n_fixed > n_changed:
+
+        # Sort changed based on matched indices
+        sorted_changed = np.zeros_like(fixed)  # Initialize with zeros
+        for i, (fixed_idx, changed_idx) in enumerate(matched_pairs):
+            if changed_idx != -1:
+                sorted_changed[i] = changed[changed_idx]
+            else:
+                sorted_changed[i] = np.zeros((fixed[0].shape), dtype=fixed.dtype)
+                #changed[np.argmin(distances_copy[fixed_idx, :])] # match the missing changed to the closest fixed
+                #np.zeros((fixed[0].shape), dtype=fixed.dtype) # fill with zero matching
+
+        changed = sorted_changed
+
+    """
+
+    # if there are more changed than fixed, than add the rest as unordered way
+    if n_fixed < n_changed:
+        unmatched_indices = np.where(~matched_flags)[0]
+
+        for i, idx in enumerate(unmatched_indices):
+            matched_pairs[n_fixed + i][1] = idx
+
+        # Sort changed based on matched indices
+        sorted_changed = np.zeros_like(changed)  # Initialize with zeros
+        for i, (fixed_idx, changed_idx) in enumerate(matched_pairs):
+            # if n_changed > n_fixed, changed_idx newer be -1
+            sorted_changed[i] = changed[changed_idx]
+
+        zero_matrices = np.zeros((n_changed - n_fixed, *fixed[0].shape), dtype=fixed.dtype) # fill with zero matching
+        appended_fixed = np.append(fixed, zero_matrices, axis=0)
+
+        fixed = appended_fixed
+        changed = sorted_changed
+        
+    # if more fixed than changed then match those preds with zero matrices
+    if n_fixed > n_changed:
+
+        # Sort changed based on matched indices
+        sorted_changed = np.zeros_like(fixed)  # Initialize with zeros
+        for i, (fixed_idx, changed_idx) in enumerate(matched_pairs):
+            if changed_idx != -1:
+                sorted_changed[i] = changed[changed_idx]
+            else:
+                sorted_changed[i] = np.zeros((fixed[0].shape), dtype=fixed.dtype) # fill with zero matching
+
+        changed = sorted_changed
+    """
+    
+    return fixed, changed, matched_pairs
+
+
 
 def match_models(preds, gts, match_by = "root"):
 
@@ -179,8 +322,7 @@ def align_by_root(joints):
 
     return joints - root
 
-
-def compute_mpjpe(preds3d, gt3ds, mask=None):
+def compute_mpjpe_original(preds3d, gt3ds):
     """
     Gets MPJPE after root alignment + MPJPE after Procrustes.
     Evaluates on all the 24 joints joints.
@@ -191,13 +333,84 @@ def compute_mpjpe(preds3d, gt3ds, mask=None):
         MPJPE : scalar - mean of all MPJPE errors
         MPJPE_PA : scalar- mean of all MPJPE_PA errors
     """
-
-    num_models = len(gt3ds)
-    if mask is None: # if mask is none, this means use the original MPJPE and take all joints into accont
-        mask = np.ones((num_models, 24), dtype=bool)
-
-
     errors, errors_pa = [], []
+
+    for i, (gt3d, pred3d) in enumerate(zip(gt3ds, preds3d)):
+        # gt3d = gt3d.reshape(-1, 3)
+        # Root align.
+        gt3d = align_by_root(gt3d)
+        pred3d = align_by_root(pred3d)
+
+        # Compute MPJPE_PA and also store similiarity matrices to apply them later to rotation matrices for MPJAE_PA
+        pred3d_sym, R = compute_similarity_transform(pred3d, gt3d)  
+        
+        # Compute MPJPE
+        joint_error = np.sqrt(np.sum((gt3d - pred3d) ** 2, axis=1))
+        errors.append(np.mean(joint_error))
+
+        # Compute MPJPE_PA and also store similiarity matrices to apply them later to rotation matrices for MPJAE_PA
+        pa_error = np.sqrt(np.sum((gt3d - pred3d_sym) ** 2, axis=1))
+        errors_pa.append(np.mean(pa_error))
+
+    return np.array(errors), np.array(errors_pa)
+
+def compute_mpjpe_per_joint(preds3d, gt3ds):
+    """
+    Gets MPJPE after root alignment + MPJPE after Procrustes.
+    Evaluates on all the 24 joints joints.
+    Inputs:
+    :param gt3ds: N x 24 x 3
+    :param preds: N x 24 x 3
+    :returns
+        MPJPE : scalar - mean of all MPJPE errors
+        MPJPE_PA : scalar- mean of all MPJPE_PA errors
+    """
+    n_models, n_joints = preds3d.shape[:2]
+    errors = np.zeros((n_models, n_joints))
+    errors_pa = np.zeros((n_models, n_joints))
+
+    #errors, errors_pa = [], []
+
+    for i, (gt3d, pred3d) in enumerate(zip(gt3ds, preds3d)):
+        if not np.any(pred3d): # if the model can not be found. penalize infinitely
+            errors[i] = np.ones(n_joints) * 9999
+            errors_pa[i] = np.ones(n_joints) * 9999
+            continue
+
+        # gt3d = gt3d.reshape(-1, 3)
+        # Root align.
+        gt3d = align_by_root(gt3d)
+        pred3d = align_by_root(pred3d)
+
+        # Compute MPJPE_PA and also store similiarity matrices to apply them later to rotation matrices for MPJAE_PA
+        pred3d_sym, R = compute_similarity_transform(pred3d, gt3d)  
+        
+        # Compute MPJPE
+        joint_error = np.sqrt(np.sum((gt3d - pred3d) ** 2, axis=1))
+        errors[i] = joint_error
+        #errors.append(np.mean(joint_error))
+
+        # Compute MPJPE_PA and also store similiarity matrices to apply them later to rotation matrices for MPJAE_PA
+        pa_error = np.sqrt(np.sum((gt3d - pred3d_sym) ** 2, axis=1))
+        errors_pa[i] = pa_error
+        #errors_pa.append(np.mean(pa_error))
+
+    return np.array(errors), np.array(errors_pa)
+
+def compute_mpjpe(preds3d, gt3ds, mask):
+    """
+    Gets MPJPE after root alignment + MPJPE after Procrustes.
+    Evaluates on all the 24 joints joints.
+    Inputs:
+    :param gt3ds: N x 24 x 3
+    :param preds: N x 24 x 3
+    :returns
+        MPJPE : scalar - mean of all MPJPE errors
+        MPJPE_PA : scalar- mean of all MPJPE_PA errors
+    """
+    errors, errors_pa = [], []
+
+    errors_modified, errors_pa_modified = [], []
 
     for i, (gt3d, pred3d) in enumerate(zip(gt3ds, preds3d)):
         # gt3d = gt3d.reshape(-1, 3)
@@ -212,11 +425,10 @@ def compute_mpjpe(preds3d, gt3ds, mask=None):
             # so do not take that into account
             errors.append(0)
             errors_pa.append(0)
+
+            errors_modified.append(0)
+            errors_pa_modified.append(0)
             continue
-        else:
-            gt3d = gt3d[mask[i], :]
-            pred3d = pred3d[mask[i], :]
-            pred3d_sym = pred3d_sym[mask[i], :]
         
         # Compute MPJPE
         joint_error = np.sqrt(np.sum((gt3d - pred3d) ** 2, axis=1))
@@ -227,7 +439,37 @@ def compute_mpjpe(preds3d, gt3ds, mask=None):
         errors_pa.append(np.mean(pa_error))
 
 
-    return np.mean(np.array(errors)), np.mean(np.array(errors_pa))
+        ################################ MODIFIED MPJPE##############################################################
+        gt3d_masked = gt3d[mask[i], :]
+        pred3d_masked = pred3d[mask[i], :]
+        pred3d_sym_masked = pred3d_sym[mask[i], :]
+
+        # Compute Modified MPJPE 
+        joint_error_modified = np.sqrt(np.sum((gt3d_masked - pred3d_masked) ** 2, axis=1))
+        errors_modified.append(np.mean(joint_error_modified))
+
+        # Compute Modified MPJPE_PA and also store similiarity matrices to apply them later to rotation matrices for MPJAE_PA
+        pa_error_modified = np.sqrt(np.sum((gt3d_masked - pred3d_sym_masked) ** 2, axis=1))
+        errors_pa_modified.append(np.mean(pa_error_modified))
+    """
+    orig_diff = np.abs(errors_pa[0]- errors_pa[1])
+    modified_diff = np.abs(errors_pa_modified[0]- errors_pa_modified[1])
+    orig_percent = np.abs(errors_pa[0] - errors_pa[1]) / min(errors_pa[0], errors_pa[1])
+    modified_percent = np.abs(errors_pa_modified[0] - errors_pa_modified[1]) / min(errors_pa_modified[0], errors_pa_modified[1])
+    print(int(orig_percent*100))
+    print(int(modified_percent*100))
+    try:
+        percent_diff = np.abs(int(orig_percent*100) - int(modified_percent*100)) / min(int(orig_percent*100), int(modified_percent*100))
+        print(int(percent_diff*100))
+    except:
+        print("passing")
+    #percent = np.abs(orig_diff - modified_diff) / min(orig_diff, modified_diff)
+    #print(int(percent * 100))
+    #diff = np.array(errors_pa) - np.array(errors_pa_modified)
+    #print(diff)
+    """
+
+    return np.mean(np.array(errors)), np.mean(np.array(errors_pa)), np.mean(np.array(errors_modified)), np.mean(np.array(errors_pa_modified))
 
 def compute_shape_error(preds, groundtruths): # use maybe rmse for shape errors 
     return rmse(preds, groundtruths)

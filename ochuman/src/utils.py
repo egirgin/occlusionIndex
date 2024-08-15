@@ -90,8 +90,6 @@ def crowd_index(keypoints):
 
     crowd_indices = [] # holds values per person
 
-    crowd_keypoints_list = [] # holds the list of all crowd keypoints
-
     for model_id in range(num_models):
         bbox = estimate_bbox(keypoints[model_id])
 
@@ -109,9 +107,26 @@ def crowd_index(keypoints):
                     crowd_keypoints.append(kp_id)
 
         crowd_indices.append(len(crowd_keypoints) / 19) # coco format has 19 keypoints
-        crowd_keypoints_list.append(crowd_keypoints)
 
-    return crowd_indices, crowd_keypoints_list
+    return crowd_indices
+
+def crowd_metric(bbox, keypoints, current_model_id):
+    
+    num_models, num_joints = keypoints.shape[:2]
+
+    crowd_index = 0
+
+    for model_id in range(num_models):
+        if model_id == current_model_id:
+            continue
+
+        for joint_id in range(num_joints):
+            keypoint = keypoints[model_id][joint_id]
+
+            if bbox[0][0] < keypoint[0] < bbox[1][0] and bbox[0][1] < keypoint[1] < bbox[1][1]:
+                crowd_index += 1
+        
+    return crowd_index / num_joints
 
 
 def dump_sorted(filename_list, index_list, occ_status, subset_name, folder_name = "../selected_frames"):

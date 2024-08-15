@@ -1,2 +1,0 @@
-MPJPE for agora torso_subset: 1.9173222354471595 
-PA-MPJPE for agora torso_subset: 0.5962621669870546 

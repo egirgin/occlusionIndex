@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
     only_multiperson = True
 
-    #seq_list = ["courtyard_basketball_00"] # cheating to process only one seq
+    seq_list = ["outdoors_freestyle_00"] # cheating to process only one seq
 
     for seq_name in seq_list:
         print("-------------------------------------------------------")
@@ -192,9 +192,9 @@ if __name__ == "__main__":
             print("Sequence {} could not be found!".format(seq_name))
             sys.exit()
 
-        if only_multiperson and len(seq["poses"]) < 2:
-            print("Skipping {} due to lack of multi person occlusion.".format(seq_name))
-            continue 
+        #if only_multiperson and len(seq["poses"]) < 2:
+        #    print("Skipping {} due to lack of multi person occlusion.".format(seq_name))
+        #    continue 
 
         smpl_m = SMPLModel('/home/tuba/Documents/emre/thesis/models/converted/SMPL_MALE.pkl')
         smpl_f = SMPLModel('/home/tuba/Documents/emre/thesis/models/converted/SMPL_FEMALE.pkl')

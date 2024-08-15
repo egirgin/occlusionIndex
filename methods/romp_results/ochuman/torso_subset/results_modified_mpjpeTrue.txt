@@ -1,2 +1,0 @@
-MPJPE for ochuman torso_subset: 2.341997644098284 
-PA-MPJPE for ochuman torso_subset: 0.4272726996623353 

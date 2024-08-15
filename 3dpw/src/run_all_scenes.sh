@@ -1,1 +1,0 @@
-python 3dpw/src/main -s all

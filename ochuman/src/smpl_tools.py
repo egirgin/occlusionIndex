@@ -13,7 +13,7 @@ def eft2smplPose(eft_pose):
     for i in range(24):
         rotmat = eft_pose_reshape[i].reshape(3, 3)
         r = Rotation.from_matrix(rotmat)
-        euler = r.as_euler("xyz")
+        euler = r.as_rotvec()
         smpl_pose[i] = euler
 
 
@@ -44,7 +44,7 @@ def read_smpl(prefix, split="train"):
     return smpl
 
 def process_smpl(smpl_json):
-    os.makedirs("gtSMPL", exist_ok=True)
+    os.makedirs("./ochuman/gtSMPL", exist_ok=True)
 
     for data in smpl_json["data"]:
 
@@ -56,16 +56,34 @@ def process_smpl(smpl_json):
             "bbox_center": data["bbox_center"]
         }
 
-        with open("gtSMPL/"+data["imageName"][:-3]+"txt", "a+") as gt_json:
+        with open("./ochuman/gtSMPL/"+data["imageName"][:-3]+"txt", "a+") as gt_json:
             str_json = json.dumps(smpl_dict)
             gt_json.write(str_json+"\n")
 
 
 def get_smpl(imgname):
     try:
-        with open("gtSMPL/"+imgname[:-4]+".txt", "r") as smplGT:
+        with open("./ochuman/gtSMPL/"+imgname[:-4]+".txt", "r") as smplGT:
             smpls = smplGT.read().splitlines()
     except:
         return None, None
 
     return len(smpls), smpls
+
+"""def process_smpl(smpl_slist):
+
+    num_models = len(smpl_slist)
+
+    thetas = np.zeros((num_models, 24, 3))
+    betas = np.zeros((num_models, 10))
+    cams = np.zeros((num_models, 3))
+    bbox_centers = np.zeros((num_models, 2))
+
+    for id, slist in enumerate(smpl_slist):
+        smpl_params = json.loads(slist)
+        thetas[id] = smpl_params["parm_pose"]
+        betas[id] = smpl_params["parm_shape"]
+        cams[id] = smpl_params["parm_cam"]
+        bbox_centers[id] = smpl_params["bbox_center"]
+
+    return thetas, betas, cams, bbox_centers"""

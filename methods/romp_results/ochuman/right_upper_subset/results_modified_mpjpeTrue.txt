@@ -1,2 +1,0 @@
-MPJPE for ochuman right_upper_subset: 2.0922960159211597 
-PA-MPJPE for ochuman right_upper_subset: 0.3677728369103199 

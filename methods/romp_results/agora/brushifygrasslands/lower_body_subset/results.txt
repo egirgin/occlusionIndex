@@ -1,2 +1,0 @@
-MPJPE for agora lower_body_subset: 1.2330191155819252 
-PA-MPJPE for agora lower_body_subset: 0.5975570366267707 

@@ -1,6 +1,19 @@
 import numpy as np
 import cv2
 import os, json
+import colorsys
+
+def generate_distinct_colors(num_colors):
+    colors = []
+    for i in range(num_colors):
+        hue = i / num_colors  # Distribute hues evenly
+        saturation = 0.7  # You can adjust this value
+        lightness = 0.6  # You can adjust this value
+        rgb = colorsys.hls_to_rgb(hue, lightness, saturation)
+        # Convert the float values to integers in the range [0, 255]
+        r, g, b = [int(x * 255) for x in rgb]
+        colors.append((r, g, b))
+    return colors
 
 def read_img(img_path, scale=1, show=False):
     img = cv2.imread(img_path)
@@ -21,35 +34,24 @@ def show_img(img, window_name):
 
 
 def save_processed_img(img, img_filename):
-	os.makedirs("processed_imgs", exist_ok=True)
+	os.makedirs("ochuman/processed_imgs_new", exist_ok=True)
 
-	cv2.imwrite("processed_imgs/{}".format(img_filename), img)
+	cv2.imwrite("ochuman/processed_imgs_new/{}".format(img_filename), img)
 
-def draw_keypoints(image, keypoints, occlusion_status, colors, draw_red=False, only_occluded=False):
-	num_models = len(keypoints)
+def draw_keypoints(image, keypoints, occlusion_status, only_occluded=False):
+    num_models = len(keypoints)
 
-	if colors == None:
-		colors = np.random.randint(255, size=(num_models, 3)).tolist()  # try not to send colors None
-
-	for model_id in range(len(keypoints)):
-
-		for kp_id, kp in enumerate(keypoints[model_id]):
-			if only_occluded:
-				if occlusion_status[model_id][kp_id]:
-					#continue
-					if draw_red:
-						image = cv2.circle(image, (int(kp[0]), int(kp[1])), 2, (0, 0, 255), 5)
-					else:
-						image = cv2.circle(image, (int(kp[0]), int(kp[1])), 2, colors[model_id], 5)
-			else:
-				if draw_red:
-						image = cv2.circle(image, (int(kp[0]), int(kp[1])), 2, (0, 0, 255), 5)
-				else:
-					image = cv2.circle(image, (int(kp[0]), int(kp[1])), 2, colors[model_id], 5)
-			#image = cv2.putText(image, "{}".format(occlusion_status[model_id, kp_id]), (int(kp[0]), int(kp[1])), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
-
-
-	return image
+    for model_id in range(num_models):
+        for kp_id, kp in enumerate(keypoints[model_id]):
+            if kp[0] == 0 or kp[1] == 0:
+                 continue
+            if only_occluded: 
+                if occlusion_status[model_id][kp_id]:
+                    image = cv2.circle(image, (int(kp[0]), int(kp[1])), 1, (0, 0, 255), 2)
+            else:
+                image = cv2.circle(image, (int(kp[0]), int(kp[1])), 2, (0, 0, 255), 3)
+            #image = cv2.putText(image, "{}".format(occlusion_status[model_id, kp_id]), (int(kp[0]), int(kp[1])), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
+    return image
 
 
 def draw_masks(image, masks, colors):
@@ -86,22 +88,22 @@ def draw_masks(image, masks, colors):
 
 def draw_bboxes(image, bboxes, colors, index_values):
 
-	num_models = len(bboxes)
+    num_models = len(bboxes)
 
-	if colors == None:
-		colors = np.random.randint(255, size=(num_models, 3)).tolist()  # try not to send colors None
+    if colors == None:
+        colors = np.random.randint(255, size=(num_models, 3)).tolist()  # try not to send colors None
 
-	for model_id in range(num_models):
+    for model_id in range(num_models):
 
-		left_top = bboxes[model_id][0]
+        left_top = bboxes[model_id][0]
 
-		right_bottom = bboxes[model_id][1]
+        right_bottom = bboxes[model_id][1]
 
-		image = cv2.rectangle(image, left_top, right_bottom, colors[model_id], 2)
-		if index_values != None:
-			image = cv2.putText(image, "{:.2f}".format(index_values[model_id]), left_top, cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
+        image = cv2.rectangle(image, left_top, right_bottom, colors[model_id], 2)
+        if index_values != None:
+            image = cv2.putText(image, "{:.2f}".format(index_values[model_id]), left_top, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
-	return image
+    return image
 
 
 def draw_sidebyside(img1, img2, vis_scale= 1, show=True, title="Side by Side"):

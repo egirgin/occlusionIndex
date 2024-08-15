@@ -1,2 +1,0 @@
-MPJPE for agora head_subset: 1.9527697425939015 
-PA-MPJPE for agora head_subset: 0.5999802539112069 

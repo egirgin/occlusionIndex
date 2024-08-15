@@ -1,2 +1,0 @@
-MPJPE for ochuman head_subset: 0.6629728008269984 
-PA-MPJPE for ochuman head_subset: 0.3355099590920492 

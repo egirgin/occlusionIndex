@@ -108,7 +108,7 @@ coco_subset = {
     "upper_body_subset" : COCO_SUBSET.right_upper_subset.value + COCO_SUBSET.left_upper_subset.value,
     "lower_body_subset" : COCO_SUBSET.left_upper_subset.value + COCO_SUBSET.left_lower_subset.value,
 
-    "empty_subset" : []
+    "all_subset" : []
 }
 
 def form_criterion(subset):

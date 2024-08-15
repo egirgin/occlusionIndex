@@ -1,2 +1,0 @@
-MPJPE for ochuman lower_body_subset: 1.8382339180628298 
-PA-MPJPE for ochuman lower_body_subset: 0.32020176434056985 

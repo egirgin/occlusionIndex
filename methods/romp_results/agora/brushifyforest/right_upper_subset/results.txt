@@ -1,2 +1,0 @@
-MPJPE for agora right_upper_subset: 0.8957978831234035 
-PA-MPJPE for agora right_upper_subset: 0.5222867533260133 
