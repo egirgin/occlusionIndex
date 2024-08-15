@@ -4,10 +4,10 @@ Each dataset has its own code.
 
 For Python3 compatible SMPL refer this repository https://github.com/egirgin/smpl_basics as prerequisite
 
-Make sure you downloaded the datasets 
-3DPW: https://virtualhumans.mpi-inf.mpg.de/3DPW/evaluation.html
-Agora: https://agora.is.tue.mpg.de/index.html
-OCHuman: https://github.com/liruilong940607/OCHumanApi
+Make sure you downloaded the datasets:
+* 3DPW: https://virtualhumans.mpi-inf.mpg.de/3DPW/evaluation.html \\
+* Agora: https://agora.is.tue.mpg.de/index.html \\ 
+* OCHuman: https://github.com/liruilong940607/OCHumanApi 
 
 
 For all scripts make sure the paths are correct.
