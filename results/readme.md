@@ -1,3 +1,5 @@
+# Important Information for Benchmarking
+
 We encourage researchers to use this results as benchmark for your their _3D Human Pose and Shape Estimation_ models. The researchers shall denote their thresholding as follows: ```<occlusion_type><threshold>```. For instance, ```SOI0.75``` means the subset formed by the samples whose _Silhouette Occlusion Index_ score is above _0.75_. 
 
 Each file contains the the list of frames ordered by the occlusion amount. Note that person id is the order of that person in the annotation list.
