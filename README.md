@@ -1,5 +1,10 @@
 # occlusionIndex
 
+## Results
+
+To only use the benchmark, check the results folder.
+
+## Reproduce
 Each dataset has its own code. 
 
 For Python3 compatible SMPL refer this repository https://github.com/egirgin/smpl_basics as prerequisite
