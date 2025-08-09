@@ -29,6 +29,11 @@ If you use this code or our metrics in your research, please cite the relevant p
 ```
 
 -----
+## Pre-computed Results
+
+Pre-computed benchmark is available in the `/results` folder for direct comparison.
+
+-----
 
 ## Getting Started
 
@@ -83,12 +88,6 @@ The code is organized by dataset.
 
 -----
 
-## Pre-computed Results
 
-Pre-computed results are available in the `/results` folder for direct comparison.
 
------
 
-## License
-
-This project is licensed under the [Your License] License. See the `LICENSE.md` file for details.
